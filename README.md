@@ -128,7 +128,7 @@ docker-compose up -d
 docker-compose logs -f
 ```
 
-The web interface will be available at: http://localhost:5000
+The web interface will be available at: http://localhost:2025
 
 #### Docker Commands Reference
 ```bash
