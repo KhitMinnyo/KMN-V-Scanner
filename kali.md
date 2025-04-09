@@ -277,7 +277,7 @@ sudo rm -rf data/*
    ```
 
 2. **Access the Interface**
-   - Open your browser and navigate to: http://localhost:5000
+   - Open your browser and navigate to: http://localhost:2025
    - The web interface works best with Firefox or Chromium (both pre-installed on Kali)
 
 ## Updating the Tool
