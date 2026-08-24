@@ -249,6 +249,18 @@ $("#cloud-form").addEventListener("submit", async (event) => {
 });
 
 $("#refresh-button").addEventListener("click", refreshAll);
+$("#clear-results-button").addEventListener("click", async () => {
+    if (!window.confirm("Delete all saved scan results? Recurring schedules will be kept.")) return;
+    try {
+        const data = await request("/api/scan-results", { method: "DELETE" });
+        $("#form-message").className = "form-message success";
+        $("#form-message").textContent = `Cleared ${data.deleted_scans} saved scan(s).`;
+        await refreshAll();
+    } catch (error) {
+        $("#form-message").className = "form-message error";
+        $("#form-message").textContent = error.message;
+    }
+});
 $("#close-dialog").addEventListener("click", () => $("#scan-dialog").close());
 $("#scan-dialog").addEventListener("click", (event) => { if (event.target === $("#scan-dialog")) $("#scan-dialog").close(); });
 initializeAuthorizationGate();

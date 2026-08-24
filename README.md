@@ -115,6 +115,8 @@ When the authorization popup appears:
 
 Stop the local dashboard with `Ctrl+C`.
 
+Use `Clear results` in the Recent scans panel to delete saved scan results. This keeps recurring schedules and configuration settings.
+
 The `UDP top 100 ports` option is slower and normally requires running the application with privileges that permit Nmap UDP scanning. Version-based NVD matches are marked with low confidence and should be verified before remediation.
 
 Open a completed scan's `Details` view to export CSV, open an HTML report, or compare it with the previous completed scan of the same target.

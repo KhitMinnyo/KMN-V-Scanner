@@ -10,6 +10,7 @@ All notable changes to KMN Vulnerability Scanner are documented here.
 - Removed the login dialog, user-management panel, user routes, and dashboard password settings.
 - Local `./manage.sh run` now opens the scanner directly after the authorization notice.
 - Kept the authorization notice and per-scan confirmation as the scanner safety control.
+- Added a confirmation-protected `Clear results` action for saved scan history.
 
 ## [3.6.0] - 2026-08-24
 

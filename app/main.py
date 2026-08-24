@@ -148,6 +148,15 @@ def scans() -> dict:
     return {"scans": database.list_jobs()}
 
 
+@app.delete("/api/scan-results")
+def clear_scan_results() -> dict:
+    try:
+        deleted = database.clear_scan_results()
+    except RuntimeError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    return {"status": "cleared", "deleted_scans": deleted}
+
+
 @app.get("/api/scans/{scan_id}")
 def scan_details(scan_id: str) -> dict:
     scan = database.get_scan_details(scan_id)

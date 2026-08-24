@@ -199,6 +199,20 @@ def list_jobs(limit: int = 50) -> list[dict[str, Any]]:
     return [dict(row) for row in rows]
 
 
+def clear_scan_results() -> int:
+    """Delete persisted scan jobs and their cascaded results, keeping schedules."""
+    with connection() as conn:
+        active = conn.execute(
+            "SELECT COUNT(*) FROM scan_jobs WHERE status IN ('queued', 'running', 'cancelling')"
+        ).fetchone()[0]
+        if active:
+            raise RuntimeError("Stop active scans before clearing saved results")
+        count = conn.execute("SELECT COUNT(*) FROM scan_jobs").fetchone()[0]
+        conn.execute("DELETE FROM scan_jobs")
+        conn.execute("DELETE FROM sqlite_sequence WHERE name IN ('services', 'findings', 'tool_runs')")
+    return count
+
+
 def add_service(scan_id: str, service: dict[str, Any]) -> None:
     with connection() as conn:
         conn.execute(
