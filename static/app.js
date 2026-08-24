@@ -36,6 +36,12 @@ function initializeAuthorizationGate() {
         document.body.classList.add("gate-blocked");
         blocked.hidden = false;
     });
+    $("#authorization-retry").addEventListener("click", () => {
+        blocked.hidden = true;
+        document.body.classList.remove("gate-blocked");
+        document.body.classList.add("gate-locked");
+        dialog.showModal();
+    });
 }
 
 async function loadDashboard() {

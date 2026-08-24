@@ -38,7 +38,8 @@
             <div class="authorization-mark">!</div>
             <h2>Access blocked</h2>
             <p>ခွင့်ပြုချက်ကို အတည်မပြုထားသောကြောင့် scanner ကို အသုံးပြု၍မရပါ။</p>
-            <p>You cancelled the authorization notice. Reload the page and select OK only if you are authorized to scan the target.</p>
+            <p>You cancelled the authorization notice. Select the button below and choose OK only if you are authorized to scan the target.</p>
+            <button id="authorization-retry" class="primary-button blocked-retry" type="button">Show authorization notice again</button>
         </div>
     </div>
 
@@ -114,6 +115,6 @@
         <div class="dialog-heading"><div><p class="eyebrow accent">SCAN DETAIL</p><h3 id="dialog-title">Scan</h3></div><button class="close-button" id="close-dialog" type="button" aria-label="Close">×</button></div>
         <div id="dialog-content"></div>
     </dialog>
-    <script src="/static/app.js" defer></script>
+    <script src="/static/app.js?v=3.0.0-auth-gate-2" defer></script>
 </body>
 </html>
