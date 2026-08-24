@@ -4,6 +4,15 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$ROOT_DIR"
 
+# Optional organization-wide runtime secrets. Keep this file root-owned with mode 600.
+GLOBAL_ENV_FILE="${KMN_GLOBAL_ENV_FILE:-/etc/kmn-v-scanner.env}"
+if [[ -r "$GLOBAL_ENV_FILE" ]]; then
+    set -a
+    # shellcheck disable=SC1090
+    source "$GLOBAL_ENV_FILE"
+    set +a
+fi
+
 usage() {
     printf '%s\n' \
         'Usage: ./manage.sh <command>' \

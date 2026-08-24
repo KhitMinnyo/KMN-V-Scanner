@@ -134,8 +134,17 @@ ensure_env_key "WINDOWS_AUDIT_PASSWORD" ""
 ensure_env_key "WINDOWS_AUDIT_TRANSPORT" "ntlm"
 ensure_env_key "WINDOWS_AUDIT_SERVER_CERT_VALIDATION" "validate"
 ensure_env_key "CLOUD_ALLOWED_PROVIDERS" "aws,azure,gcp"
+ensure_env_key "VULNERABILITY_DB_PATH" ""
 
 ./manage.sh install
+
+VULN_DB_PATH="${VULNERABILITY_DB_PATH:-$ROOT_DIR/vulnerability-db/data/vulnerabilities.sqlite3}"
+if [[ ! -f "$VULN_DB_PATH" ]]; then
+    .venv/bin/python -m vulndb --db "$VULN_DB_PATH" init
+    printf '%s\n' 'Initialized an empty vulnerability intelligence database.'
+else
+    printf '%s\n' 'Using bundled vulnerability intelligence database.'
+fi
 
 printf '\n%s\n' 'KMN Vulnerability Scanner setup complete.'
 

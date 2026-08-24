@@ -8,9 +8,9 @@ Version: **3.7.0**
 
 See the [CHANGELOG](CHANGELOG.md) for release history.
 
-Local-first vulnerability scanning dashboard for Kali Linux. It combines Nmap, Nuclei, testssl.sh, optional OWASP ZAP, and optional NVD CVE lookup.
+Local-first vulnerability scanning dashboard for Kali Linux. It combines Nmap, Nuclei, testssl.sh, optional OWASP ZAP, optional NVD CVE lookup, and the bundled source-aware vulnerability intelligence database.
 
-Current coverage includes TCP service detection, CIDR live-host discovery, Nmap NSE checks, Nuclei templates, TLS checks, optional UDP scanning, service CPE-to-CVE matching, Trivy artifact scans, read-only SSH and Windows audits, AWS/Azure/GCP Prowler audits, recurring schedules, webhook/email notifications, scan comparison, dashboard login, and CSV/HTML reports.
+Current coverage includes TCP service detection, CIDR live-host discovery, Nmap NSE checks, Nuclei templates, TLS checks, optional UDP scanning, CPE/PURL-aware CVE matching, KEV/EPSS enrichment, Trivy artifact scans, read-only SSH and Windows audits, AWS/Azure/GCP Prowler audits, recurring schedules, webhook/email notifications, scan comparison, and CSV/HTML reports.
 
 Only scan systems and networks that you own or are explicitly authorized to assess. The dashboard displays a Burmese/English authorization warning before scanning is available. Unauthorized scanning may be a criminal or civil offense depending on your jurisdiction.
 
@@ -27,6 +27,8 @@ cd KMN-V-Scanner
 ```
 
 The setup script installs the required Kali packages, creates `.venv`, installs Python dependencies, creates a protected `.env`, adds missing configuration keys without overwriting existing values, and attempts to install Nuclei for the detected `amd64` or `arm64` architecture.
+
+The repository includes the seed file `vulnerability-db/data/vulnerabilities.sqlite3`. It is installed as a local editable package and used for offline CPE/CVE enrichment. If the seed file is absent, setup creates an empty database instead of silently downloading unreviewed data.
 
 Check installed scanner tools:
 
@@ -91,6 +93,15 @@ NVD_API_KEY=your_personal_nvd_api_key
 ```
 
 Never commit `.env`, put the key in a script, or share it. If a key was previously exposed, revoke it and request a new one.
+
+For one organization-wide NVD key on a shared Kali scanner, keep it outside the repository:
+
+```bash
+sudo install -m 600 /dev/null /etc/kmn-v-scanner.env
+sudo nano /etc/kmn-v-scanner.env
+```
+
+Add `NVD_API_KEY=...` to that root-owned file. `./manage.sh` loads it automatically. Set `KMN_GLOBAL_ENV_FILE` to use another protected path. Never commit the key.
 
 ## 2. Run
 

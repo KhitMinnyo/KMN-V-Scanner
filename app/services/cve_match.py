@@ -88,9 +88,11 @@ def match_services(
                     "cve_id": cve_id,
                     "description": cve.get("description", ""),
                     "evidence": (
-                        f"Service CPE {raw_cpe} matched NVD records. "
+                        f"Service CPE {raw_cpe} matched vulnerability intelligence records. "
                         f"NVD CVSS (not local risk): {cve.get('cvss_score') or 'N/A'} "
                         f"{cve.get('cvss_vector') or ''}. This is an unconfirmed version-based candidate."
+                        f" Source: {cve.get('source', 'NVD')}. KEV: {'yes' if cve.get('exploited_in_wild') else 'no'}. "
+                        f"EPSS: {cve.get('epss_score') or 'N/A'}."
                     ),
                     "remediation": "Verify the exact running version and upgrade to a vendor-fixed release.",
                     "source_tool": "nvd-cpe",

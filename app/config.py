@@ -61,6 +61,7 @@ class Settings:
         "WINDOWS_AUDIT_SERVER_CERT_VALIDATION", "validate"
     ).strip().lower()
     cloud_allowed_providers: tuple[str, ...] = _env_list("CLOUD_ALLOWED_PROVIDERS")
+    vulnerability_db_path: str = os.getenv("VULNERABILITY_DB_PATH", "").strip()
 
 
 settings = Settings()
