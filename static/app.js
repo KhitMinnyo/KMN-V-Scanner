@@ -19,6 +19,8 @@ function initializeAuthorizationGate() {
     const dialog = $("#authorization-dialog");
     const blocked = $("#blocked-screen");
     if (sessionStorage.getItem("kmn_authorization_ack") === "true") {
+        blocked.hidden = true;
+        blocked.style.display = "none";
         document.body.classList.remove("gate-locked");
         document.body.classList.add("gate-accepted");
         return;
@@ -28,6 +30,7 @@ function initializeAuthorizationGate() {
         sessionStorage.setItem("kmn_authorization_ack", "true");
         dialog.close();
         blocked.hidden = true;
+        blocked.style.display = "none";
         document.body.classList.remove("gate-locked");
         document.body.classList.remove("gate-blocked");
         document.body.classList.add("gate-accepted");
@@ -37,9 +40,11 @@ function initializeAuthorizationGate() {
         document.body.classList.remove("gate-locked");
         document.body.classList.add("gate-blocked");
         blocked.hidden = false;
+        blocked.style.display = "flex";
     });
     $("#authorization-retry").addEventListener("click", () => {
         blocked.hidden = true;
+        blocked.style.display = "none";
         document.body.classList.remove("gate-blocked");
         document.body.classList.add("gate-locked");
         dialog.showModal();
