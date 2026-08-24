@@ -12,7 +12,7 @@ usage() {
         '  install   Create a virtualenv and install dependencies' \
         '  run       Start the local dashboard on port 2025' \
         '  doctor    Check scanner binaries and architecture' \
-        '  db        Initialize the local database' \
+        '  db        Initialize the local database'
 }
 
 activate_venv() {
