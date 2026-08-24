@@ -114,6 +114,9 @@ ensure_env_key() {
 }
 
 ensure_env_key "DASHBOARD_PASSWORD" ""
+ensure_env_key "DASHBOARD_USERNAME" "admin"
+ensure_env_key "DASHBOARD_ROLE" "admin"
+ensure_env_key "DASHBOARD_SESSION_SECRET" ""
 ensure_env_key "AUTO_UPDATE_NUCLEI_TEMPLATES" "true"
 ensure_env_key "TRIVY_SCAN_ROOT" "."
 ensure_env_key "SSH_AUDIT_USER" ""

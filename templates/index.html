@@ -17,7 +17,11 @@
                 <h1>KMN Vulnerability Scanner</h1>
             </div>
         </div>
-        <div class="version-pill">v<span id="app-version">...</span></div>
+        <div class="account-controls">
+            <span id="current-user" class="account-user">...</span>
+            <button id="logout-button" class="topbar-button" type="button" hidden>Logout</button>
+            <div class="version-pill">v<span id="app-version">...</span></div>
+        </div>
     </header>
 
     <dialog id="authorization-dialog" class="authorization-dialog" aria-labelledby="authorization-title">
@@ -137,6 +141,18 @@
             </div>
         </section>
 
+        <section id="users-panel" class="panel users-panel" hidden>
+            <div class="panel-heading"><div><p class="eyebrow accent">ACCESS CONTROL</p><h3>Dashboard users</h3></div><span class="muted">Admin only</span></div>
+            <form id="user-form" class="user-form">
+                <input id="new-username" type="text" placeholder="Username" maxlength="64" required>
+                <input id="new-password" type="password" placeholder="Password (12+ characters)" minlength="12" maxlength="256" required>
+                <select id="new-role"><option value="viewer">Viewer</option><option value="operator">Operator</option><option value="admin">Admin</option></select>
+                <button class="ghost-button" type="submit">Add user</button>
+            </form>
+            <div id="user-message" class="form-message" role="status"></div>
+            <div id="users-list" class="users-list"><div class="empty-state">No local users.</div></div>
+        </section>
+
         <section class="phase3-grid">
             <div class="panel">
                 <div class="panel-heading"><div><p class="eyebrow accent">WINDOWS SECURITY</p><h3>Read-only WinRM audit</h3></div><span class="muted">5986 / 5985</span></div>
@@ -190,6 +206,7 @@
         <h3>Password required</h3>
         <p class="authorization-text">This dashboard is protected. Only operators with the configured dashboard password may sign in.</p>
         <form id="login-form">
+            <input id="login-username" type="text" placeholder="Username" autocomplete="username" required>
             <input id="login-password" type="password" placeholder="Dashboard password" autocomplete="current-password" required>
             <div class="authorization-actions">
                 <button class="primary-button" type="submit">Sign in <span aria-hidden="true">↗</span></button>
@@ -197,6 +214,6 @@
         </form>
         <p id="login-error" class="form-message error" role="alert"></p>
     </dialog>
-    <script src="/static/app.js?v=3.4.0-phase4" defer></script>
+    <script src="/static/app.js?v=3.6.0-rbac" defer></script>
 </body>
 </html>

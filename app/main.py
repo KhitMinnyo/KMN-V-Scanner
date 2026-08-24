@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import csv
+import base64
 import hashlib
 import html
 import hmac
@@ -12,62 +13,84 @@ import threading
 import time
 from pathlib import Path
 
-from fastapi import FastAPI, HTTPException, Response
+from fastapi import FastAPI, HTTPException, Request, Response
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
 from . import database
 from .config import ROOT_DIR, settings
-from .schemas import ArtifactScanRequest, CloudScanRequest, LoginRequest, ScanRequest, ScheduleRequest, ScheduleStateRequest, WindowsScanRequest
+from .schemas import ArtifactScanRequest, CloudScanRequest, LoginRequest, ScanRequest, ScheduleRequest, ScheduleStateRequest, UserCreateRequest, UserUpdateRequest, WindowsScanRequest
 from .scanners.runner import command_available, run_command
 from .services.jobs import job_manager
 from .services.nvd import NvdError, search as search_nvd
 from .services.scheduler import schedule_manager
+from .services import users
 
 
 app = FastAPI(title=settings.app_name, version=settings.version)
 app.mount("/static", StaticFiles(directory=ROOT_DIR / "static"), name="static")
 database.init_db()
+try:
+    users.bootstrap(settings.dashboard_username, settings.dashboard_password, settings.dashboard_role)
+except ValueError as exc:
+    print(f"Dashboard bootstrap user was not created: {exc}")
 
 PUBLIC_API_PATHS = {"/api/health", "/api/login"}
 SESSION_TTL_SECONDS = 60 * 60 * 12
 
 
-def _create_session_token() -> str:
+def _session_key() -> bytes:
+    return (settings.dashboard_session_secret or settings.dashboard_password).encode()
+
+
+def _create_session_token(user: dict) -> str:
     timestamp = str(int(time.time()))
-    signature = hmac.new(
-        settings.dashboard_password.encode(),
-        timestamp.encode(),
-        hashlib.sha256,
-    ).hexdigest()
-    return f"{timestamp}.{signature}"
+    nonce = secrets.token_hex(16)
+    encoded_username = base64.urlsafe_b64encode(user["username"].encode()).decode().rstrip("=")
+    payload = f"{encoded_username}.{user['role']}.{timestamp}.{nonce}"
+    signature = hmac.new(_session_key(), payload.encode(), hashlib.sha256).hexdigest()
+    return f"{payload}.{signature}"
 
 
-def _valid_session_token(token: str | None) -> bool:
-    if not token or "." not in token:
-        return False
-    timestamp, signature = token.split(".", 1)
+def _valid_session_token(token: str | None) -> dict | None:
+    if not token:
+        return None
+    parts = token.split(".")
+    if len(parts) != 5:
+        return None
+    encoded_username, role, timestamp, nonce, signature = parts
+    try:
+        username = base64.urlsafe_b64decode((encoded_username + "===").encode()).decode()
+    except (ValueError, UnicodeDecodeError):
+        return None
+    if not username or role not in users.ROLES or not nonce or not encoded_username:
+        return None
+    payload = ".".join(parts[:-1])
     try:
         age = int(time.time()) - int(timestamp)
     except ValueError:
-        return False
+        return None
     if age < 0 or age > SESSION_TTL_SECONDS:
-        return False
-    expected = hmac.new(
-        settings.dashboard_password.encode(),
-        timestamp.encode(),
-        hashlib.sha256,
-    ).hexdigest()
-    return hmac.compare_digest(signature, expected)
+        return None
+    expected = hmac.new(_session_key(), payload.encode(), hashlib.sha256).hexdigest()
+    if not hmac.compare_digest(signature, expected):
+        return None
+    user = users.get_user(username)
+    if settings.dashboard_password and (not user or not user["enabled"]):
+        return None
+    return {"username": username, "role": role}
 
 
 @app.middleware("http")
 async def auth_middleware(request, call_next):
     if settings.dashboard_password and request.url.path.startswith("/api"):
         if request.url.path not in PUBLIC_API_PATHS:
-            token = request.cookies.get("kmn_session")
-            if not _valid_session_token(token):
+            user = _valid_session_token(request.cookies.get("kmn_session"))
+            if not user:
                 return JSONResponse(status_code=401, content={"detail": "Login required"})
+            if request.method not in {"GET", "HEAD", "OPTIONS"} and request.url.path != "/api/logout" and user["role"] == "viewer":
+                return JSONResponse(status_code=403, content={"detail": "Viewer role is read-only"})
+            request.state.user = user
     return await call_next(request)
 
 
@@ -109,9 +132,12 @@ def health() -> dict:
 def login(body: LoginRequest, response: Response) -> dict:
     if not settings.dashboard_password:
         return {"status": "ok", "message": "No dashboard password configured"}
-    if not secrets.compare_digest(body.password, settings.dashboard_password):
+    user = users.authenticate(body.username, body.password)
+    if not user and body.username == settings.dashboard_username and secrets.compare_digest(body.password, settings.dashboard_password):
+        user = {"username": body.username, "role": settings.dashboard_role}
+    if not user:
         raise HTTPException(status_code=401, detail="Invalid password")
-    token = _create_session_token()
+    token = _create_session_token(user)
     response.set_cookie(
         "kmn_session",
         token,
@@ -120,6 +146,60 @@ def login(body: LoginRequest, response: Response) -> dict:
         max_age=SESSION_TTL_SECONDS,
     )
     return {"status": "ok"}
+
+
+@app.get("/api/me")
+def current_user(request: Request) -> dict:
+    user = getattr(request.state, "user", {"username": settings.dashboard_username, "role": settings.dashboard_role})
+    return {**user, "auth_required": bool(settings.dashboard_password)}
+
+
+def _require_admin(request: Request) -> None:
+    if getattr(request.state, "user", {}).get("role") != "admin":
+        raise HTTPException(status_code=403, detail="Admin role required")
+
+
+@app.get("/api/users")
+def list_users(request: Request) -> dict:
+    _require_admin(request)
+    return {"users": users.list_users()}
+
+
+@app.post("/api/users", status_code=201)
+def create_user(request: Request, body: UserCreateRequest) -> dict:
+    _require_admin(request)
+    try:
+        return {"user": users.create_user(body.username, body.password, body.role)}
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@app.patch("/api/users/{user_id}")
+def update_user(request: Request, user_id: int, body: UserUpdateRequest) -> dict:
+    _require_admin(request)
+    current = getattr(request.state, "user", {})
+    target = users.get_user_by_id(user_id)
+    if target and target["username"] == current.get("username") and body.enabled is False:
+        raise HTTPException(status_code=400, detail="You cannot disable your own active account")
+    try:
+        if not users.update_user(user_id, body.role, body.enabled, body.password):
+            raise HTTPException(status_code=404, detail="User not found")
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    return {"status": "updated"}
+
+
+@app.delete("/api/users/{user_id}")
+def delete_user(request: Request, user_id: int) -> dict:
+    _require_admin(request)
+    current = getattr(request.state, "user", {})
+    user_list = users.list_users()
+    target_user = next((item for item in user_list if item["id"] == user_id), None)
+    if target_user and target_user["username"] == current.get("username"):
+        raise HTTPException(status_code=400, detail="You cannot delete your own active account")
+    if not users.delete_user(user_id):
+        raise HTTPException(status_code=404, detail="User not found")
+    return {"status": "deleted"}
 
 
 @app.post("/api/logout")
