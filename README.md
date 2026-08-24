@@ -12,6 +12,8 @@ Local-first vulnerability scanning dashboard for Kali Linux. It combines Nmap, N
 
 Current coverage includes TCP service detection, CIDR live-host discovery, Nmap NSE checks, Nuclei templates, TLS checks, optional UDP scanning, CPE/PURL-aware CVE matching, KEV/EPSS enrichment, Trivy artifact scans, read-only SSH and Windows audits, AWS/Azure/GCP Prowler audits, recurring schedules, webhook/email notifications, scan comparison, and CSV/HTML reports.
 
+The main network scan runs the essential checks automatically. UDP, SSH audit, and ZAP are available under the collapsed Advanced checks section when needed.
+
 Only scan systems and networks that you own or are explicitly authorized to assess. The dashboard displays a Burmese/English authorization warning before scanning is available. Unauthorized scanning may be a criminal or civil offense depending on your jurisdiction.
 
 ## 1. Setup
@@ -130,7 +132,7 @@ Use `Clear results` in the Recent scans panel to delete saved scan results. This
 
 The `UDP top 100 ports` option is slower and normally requires running the application with privileges that permit Nmap UDP scanning. Version-based NVD matches are marked with low confidence and should be verified before remediation.
 
-Open a completed scan's `Details` view to export CSV, open an HTML report, or compare it with the previous completed scan of the same target.
+Open a completed scan's `Details` view to export CSV, open an HTML report, or compare it with the previous completed scan of the same target. Use `Delete` beside one scan to remove only that history item, or `Clear results` to remove all saved scan results.
 
 Trivy filesystem targets must be inside `TRIVY_SCAN_ROOT`. Recurring schedules prevent overlapping runs and operate only while the application is running. Webhook payloads contain target names and finding counts, so use HTTPS and configure only a trusted endpoint. Email notifications require SMTP settings and an app password where the provider supports it.
 

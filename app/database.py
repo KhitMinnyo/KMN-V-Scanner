@@ -185,6 +185,23 @@ def update_job(job_id: str, **values: Any) -> None:
         )
 
 
+def recover_interrupted_jobs() -> int:
+    """Mark jobs left active by a previous process as interrupted."""
+    with connection() as conn:
+        cursor = conn.execute(
+            """
+            UPDATE scan_jobs
+            SET status = 'failed', stage = 'interrupted',
+                message = 'Scan interrupted when the local server stopped',
+                error = 'The worker process was not running after server restart',
+                completed_at = ?
+            WHERE status IN ('queued', 'running', 'cancelling')
+            """,
+            (utc_now(),),
+        )
+    return cursor.rowcount
+
+
 def get_job(job_id: str) -> dict[str, Any] | None:
     with connection() as conn:
         row = conn.execute("SELECT * FROM scan_jobs WHERE id = ?", (job_id,)).fetchone()
@@ -211,6 +228,18 @@ def clear_scan_results() -> int:
         conn.execute("DELETE FROM scan_jobs")
         conn.execute("DELETE FROM sqlite_sequence WHERE name IN ('services', 'findings', 'tool_runs')")
     return count
+
+
+def delete_scan_result(scan_id: str) -> bool:
+    """Delete one completed or failed scan and its cascaded results."""
+    with connection() as conn:
+        row = conn.execute("SELECT status FROM scan_jobs WHERE id = ?", (scan_id,)).fetchone()
+        if not row:
+            return False
+        if row["status"] in {"queued", "running", "cancelling"}:
+            raise RuntimeError("Stop the active scan before deleting its results")
+        conn.execute("DELETE FROM scan_jobs WHERE id = ?", (scan_id,))
+    return True
 
 
 def add_service(scan_id: str, service: dict[str, Any]) -> None:

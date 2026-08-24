@@ -79,15 +79,15 @@
                         <option value="standard" selected>Standard · 1-10000 + checks</option>
                         <option value="deep">Deep · all TCP ports + web checks</option>
                     </select>
-                    <div class="check-grid">
-                        <label class="check"><input id="include-nse" type="checkbox" checked><span>Nmap NSE vulnerability scripts</span></label>
-                        <label class="check"><input id="include-cve-match" type="checkbox" checked><span>Match service versions to NVD CVEs</span></label>
-                        <label class="check"><input id="include-nuclei" type="checkbox" checked><span>Nuclei templates</span></label>
-                        <label class="check"><input id="include-tls" type="checkbox" checked><span>TLS checks</span></label>
-                        <label class="check"><input id="include-zap" type="checkbox"><span>ZAP baseline (deep only)</span></label>
-                        <label class="check"><input id="include-udp" type="checkbox"><span>UDP top 100 ports (slow, requires root)</span></label>
-                        <label class="check"><input id="include-ssh-audit" type="checkbox"><span>Read-only authenticated SSH audit</span></label>
-                    </div>
+                    <div class="automatic-checks">Automatic checks: Nmap service detection, NSE, local CVE intelligence, Nuclei, and TLS.</div>
+                    <details class="advanced-options">
+                        <summary>Advanced checks</summary>
+                        <div class="check-grid">
+                            <label class="check"><input id="include-udp" type="checkbox"><span>UDP top 100 ports (slow, requires root)</span></label>
+                            <label class="check"><input id="include-ssh-audit" type="checkbox"><span>Read-only authenticated SSH audit</span></label>
+                            <label class="check"><input id="include-zap" type="checkbox"><span>ZAP baseline (deep only)</span></label>
+                        </div>
+                    </details>
                     <button class="primary-button" type="submit" id="start-button">Start safe scan <span aria-hidden="true">↗</span></button>
                 </form>
                 <div id="form-message" class="form-message" role="status"></div>
@@ -182,6 +182,6 @@
         <div class="dialog-heading"><div><p class="eyebrow accent">SCAN DETAIL</p><h3 id="dialog-title">Scan</h3></div><button class="close-button" id="close-dialog" type="button" aria-label="Close">×</button></div>
         <div id="dialog-content"></div>
     </dialog>
-    <script src="/static/app.js?v=3.7.0-clear-results" defer></script>
+    <script src="/static/app.js?v=3.7.0-result-delete-2" defer></script>
 </body>
 </html>

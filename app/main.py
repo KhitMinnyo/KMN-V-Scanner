@@ -30,6 +30,9 @@ database.init_db()
 @app.on_event("startup")
 def startup() -> None:
     database.init_db()
+    interrupted = database.recover_interrupted_jobs()
+    if interrupted:
+        print(f"Marked {interrupted} interrupted scan job(s) after restart")
     schedule_manager.start()
     if settings.auto_update_nuclei_templates and command_available("nuclei"):
         threading.Thread(target=_update_nuclei_templates, daemon=True).start()
@@ -146,6 +149,17 @@ def update_schedule_state(schedule_id: str, request: ScheduleStateRequest) -> di
 @app.get("/api/scans")
 def scans() -> dict:
     return {"scans": database.list_jobs()}
+
+
+@app.delete("/api/scans/{scan_id}")
+def delete_scan(scan_id: str) -> dict:
+    try:
+        deleted = database.delete_scan_result(scan_id)
+    except RuntimeError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    if not deleted:
+        raise HTTPException(status_code=404, detail="Scan not found")
+    return {"status": "deleted", "id": scan_id}
 
 
 @app.delete("/api/scan-results")

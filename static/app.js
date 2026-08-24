@@ -81,9 +81,21 @@ async function loadJobs() {
             <div class="job-meta">${escapeHtml(job.profile)} · ${escapeHtml(job.stage)} · ${formatDate(job.created_at)}</div>
             <div class="job-progress"><span style="width:${Math.max(0, Math.min(100, job.progress))}%"></span></div></div>
             <div class="job-side"><span class="job-status ${escapeHtml(job.status)}">${escapeHtml(job.status)}</span>
-            <div><button class="ghost-button detail-button" data-id="${escapeHtml(job.id)}" type="button">Details</button></div></div>
+            <div class="job-actions"><button class="ghost-button detail-button" data-id="${escapeHtml(job.id)}" type="button">Details</button><button class="ghost-button delete-button" data-id="${escapeHtml(job.id)}" type="button">Delete</button></div></div>
         </article>`).join("");
     container.querySelectorAll(".detail-button").forEach((button) => button.addEventListener("click", () => showScan(button.dataset.id)));
+    container.querySelectorAll(".delete-button").forEach((button) => button.addEventListener("click", () => deleteScan(button.dataset.id)));
+}
+
+async function deleteScan(id) {
+    if (!window.confirm("Delete this saved scan and all of its results?")) return;
+    try {
+        await request(`/api/scans/${encodeURIComponent(id)}`, { method: "DELETE" });
+        await refreshAll();
+    } catch (error) {
+        $("#form-message").className = "form-message error";
+        $("#form-message").textContent = error.message;
+    }
 }
 
 async function loadFindings() {
@@ -157,9 +169,14 @@ async function showScan(id) {
                 <a class="ghost-button" href="/api/scans/${encodeURIComponent(id)}/export.csv">Export CSV</a>
                 <a class="ghost-button" href="/api/scans/${encodeURIComponent(id)}/report" target="_blank" rel="noreferrer">HTML report</a>
                 <button class="ghost-button" id="diff-button" type="button">Compare with previous</button>
+                <button class="ghost-button delete-button" id="dialog-delete-button" type="button">Delete scan</button>
             </div>
             <div id="diff-results"></div>`;
         $("#diff-button").addEventListener("click", () => loadDiff(id));
+        $("#dialog-delete-button").addEventListener("click", async () => {
+            await deleteScan(id);
+            if ($("#scan-dialog").open) $("#scan-dialog").close();
+        });
         $("#scan-dialog").showModal();
     } catch (error) { $("#form-message").textContent = error.message; $("#form-message").className = "form-message error"; }
 }
@@ -193,7 +210,7 @@ $("#scan-form").addEventListener("submit", async (event) => {
     button.disabled = true; message.className = "form-message"; message.textContent = "Queueing scan...";
     try {
         const data = await request("/api/scans", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({
-            target: $("#target").value, profile: $("#profile").value, include_nse: $("#include-nse").checked, include_cve_match: $("#include-cve-match").checked, include_nuclei: $("#include-nuclei").checked, include_tls: $("#include-tls").checked, include_zap: $("#include-zap").checked, include_udp: $("#include-udp").checked, include_ssh_audit: $("#include-ssh-audit").checked, authorization_confirmed: sessionStorage.getItem("kmn_authorization_ack") === "true",
+            target: $("#target").value, profile: $("#profile").value, include_nse: true, include_cve_match: true, include_nuclei: true, include_tls: true, include_zap: $("#include-zap").checked, include_udp: $("#include-udp").checked, include_ssh_audit: $("#include-ssh-audit").checked, authorization_confirmed: sessionStorage.getItem("kmn_authorization_ack") === "true",
         }) });
         message.className = "form-message success"; message.textContent = `Scan ${data.id.slice(0, 8)} queued.`; event.target.reset(); $("#include-nuclei").checked = true; $("#include-tls").checked = true; await refreshAll();
     } catch (error) { message.className = "form-message error"; message.textContent = error.message; }
