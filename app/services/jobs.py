@@ -9,7 +9,7 @@ import uuid
 
 from .. import database
 from ..config import settings
-from ..scanners import nmap, nuclei, target, tls, zap
+from ..scanners import nmap, nse, nuclei, target, tls, zap
 from ..scanners.runner import command_available
 
 
@@ -45,20 +45,56 @@ class JobManager:
                 status="running",
                 stage="discovery",
                 progress=5,
-                message="Starting service discovery",
+                message="Starting discovery",
                 started_at=database.utc_now(),
             )
-            result, services = nmap.scan(normalized, request.profile, settings.command_timeout, cancel_event)
+            scan_target = normalized
+            if "/" in normalized:
+                database.update_job(job_id, message="Discovering live hosts")
+                disc_result, live_hosts = nmap.discover_hosts(normalized, settings.command_timeout, cancel_event)
+                database.add_tool_run(job_id, self._tool_run("nmap-discovery", disc_result))
+                if disc_result.status == "cancelled":
+                    self._cancelled(job_id)
+                    return
+                if disc_result.status == "unavailable":
+                    raise RuntimeError("nmap is not installed. Install it with: sudo apt install nmap")
+                if disc_result.status != "completed":
+                    raise RuntimeError(disc_result.stderr or "Host discovery failed")
+                if not live_hosts:
+                    database.update_job(
+                        job_id,
+                        status="completed",
+                        stage="complete",
+                        progress=100,
+                        message="No live hosts found in the target range",
+                        completed_at=database.utc_now(),
+                    )
+                    return
+                scan_target = " ".join(live_hosts)
+                database.update_job(job_id, progress=15, message=f"Found {len(live_hosts)} live hosts")
+
+            result, services = nmap.scan(scan_target, request.profile, settings.command_timeout, cancel_event)
             database.add_tool_run(job_id, self._tool_run("nmap", result))
             if result.status == "cancelled":
                 self._cancelled(job_id)
                 return
             if result.status == "unavailable":
-                raise RuntimeError("nmap is not installed. Install it on Kali or use the Docker image.")
+                raise RuntimeError("nmap is not installed. Install it with: sudo apt install nmap")
             if result.status != "completed":
                 raise RuntimeError(result.stderr or "Nmap scan failed")
             for service in services:
                 database.add_service(job_id, service)
+
+            if request.include_nse and services:
+                database.update_job(job_id, stage="nse", progress=35, message="Running Nmap NSE vulnerability scripts")
+                ports = ",".join(str(service["port"]) for service in services)
+                nse_result, nse_findings = nse.scan(scan_target, ports, settings.command_timeout, cancel_event)
+                database.add_tool_run(job_id, self._tool_run("nmap-nse", nse_result))
+                if nse_result.status == "cancelled":
+                    self._cancelled(job_id)
+                    return
+                for finding in nse_findings:
+                    database.add_finding(job_id, finding)
 
             database.update_job(job_id, stage="checks", progress=45, message=f"Found {len(services)} open services")
             web_services = [service for service in services if service.get("url")]

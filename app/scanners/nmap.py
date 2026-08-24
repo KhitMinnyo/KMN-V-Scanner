@@ -15,6 +15,36 @@ PORT_RANGES = {
 }
 
 
+def discover_hosts(target: str, timeout: int, cancel_event: threading.Event) -> tuple[CommandResult, list[str]]:
+    """Run an nmap ping scan and return live host addresses."""
+    args = [
+        "nmap",
+        "-sn",
+        "--host-timeout",
+        f"{timeout}s",
+        "-oX",
+        "-",
+        target,
+    ]
+    if not command_available("nmap"):
+        return run_command(["nmap"], timeout=1, cancel_event=cancel_event), []
+    result = run_command(args, timeout, cancel_event)
+    if result.status != "completed":
+        return result, []
+    return result, parse_live_hosts(result.stdout)
+
+
+def parse_live_hosts(output: str) -> list[str]:
+    root = ET.fromstring(output)
+    hosts: list[str] = []
+    for host in root.findall(".//host"):
+        status = host.find("./status")
+        address = host.find("./address")
+        if status is not None and status.get("state") == "up" and address is not None:
+            hosts.append(address.get("addr", ""))
+    return [item for item in hosts if item]
+
+
 def scan(target: str, profile: str, timeout: int, cancel_event: threading.Event) -> tuple[CommandResult, list[dict]]:
     args = [
         "nmap",

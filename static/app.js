@@ -10,6 +10,11 @@ const severityRank = { critical: 1, high: 2, medium: 3, low: 4, info: 5 };
 
 async function request(url, options = {}) {
     const response = await fetch(url, options);
+    if (response.status === 401) {
+        const dialog = $("#login-dialog");
+        if (dialog && !dialog.open) dialog.showModal();
+        throw new Error("Login required");
+    }
     const data = await response.json();
     if (!response.ok) throw new Error(data.detail || data.message || "Request failed");
     return data;
@@ -125,9 +130,34 @@ async function showScan(id) {
         $("#dialog-content").innerHTML = `
             <div class="detail-block"><table class="detail-table"><tr><td>Status</td><td>${escapeHtml(scan.status)}</td></tr><tr><td>Profile</td><td>${escapeHtml(scan.profile)}</td></tr><tr><td>Message</td><td>${escapeHtml(scan.message || scan.error || "-")}</td></tr><tr><td>Created</td><td>${escapeHtml(formatDate(scan.created_at))}</td></tr></table></div>
             <div class="detail-block"><h4>Services (${scan.services.length})</h4><table class="detail-table">${scan.services.map((service) => `<tr><td>${escapeHtml(service.port)}/${escapeHtml(service.protocol)}</td><td>${escapeHtml(service.service || "unknown")} ${escapeHtml(service.product || "")} ${escapeHtml(service.version || "")}</td></tr>`).join("") || '<tr><td colspan="2">No open services</td></tr>'}</table></div>
-            <div class="detail-block"><h4>Findings (${scan.findings.length})</h4>${scan.findings.map((finding) => `<div class="detail-finding"><strong>${escapeHtml(finding.severity.toUpperCase())} · ${escapeHtml(finding.title)}</strong><div class="finding-tool">${escapeHtml(finding.source_tool)} · confidence ${escapeHtml(finding.confidence)}</div><pre>${escapeHtml(finding.evidence || finding.description || "No evidence")}</pre></div>`).join("") || '<div class="empty-state">No findings reported.</div>'}</div>`;
+            <div class="detail-block"><h4>Findings (${scan.findings.length})</h4>${scan.findings.map((finding) => `<div class="detail-finding"><strong>${escapeHtml(finding.severity.toUpperCase())} · ${escapeHtml(finding.title)}</strong><div class="finding-tool">${escapeHtml(finding.source_tool)} · confidence ${escapeHtml(finding.confidence)}</div><pre>${escapeHtml(finding.evidence || finding.description || "No evidence")}</pre></div>`).join("") || '<div class="empty-state">No findings reported.</div>'}</div>
+            <div class="detail-block dialog-actions">
+                <a class="ghost-button" href="/api/scans/${encodeURIComponent(id)}/export.csv">Export CSV</a>
+                <a class="ghost-button" href="/api/scans/${encodeURIComponent(id)}/report" target="_blank" rel="noreferrer">HTML report</a>
+                <button class="ghost-button" id="diff-button" type="button">Compare with previous</button>
+            </div>
+            <div id="diff-results"></div>`;
+        $("#diff-button").addEventListener("click", () => loadDiff(id));
         $("#scan-dialog").showModal();
     } catch (error) { $("#form-message").textContent = error.message; $("#form-message").className = "form-message error"; }
+}
+
+async function loadDiff(id) {
+    const container = $("#diff-results");
+    container.innerHTML = '<div class="empty-state">Comparing with previous scan...</div>';
+    try {
+        const diff = await request(`/api/scans/${encodeURIComponent(id)}/diff`);
+        if (!diff.previous) {
+            container.innerHTML = '<div class="empty-state">No previous completed scan exists for this target yet.</div>';
+            return;
+        }
+        container.innerHTML = `
+            <div class="detail-block"><h4>Comparison with ${escapeHtml(formatDate(diff.previous.created_at))}</h4>
+            <table class="detail-table"><tr><td>New findings</td><td>${diff.new.length}</td></tr><tr><td>Fixed findings</td><td>${diff.fixed.length}</td></tr><tr><td>Still present</td><td>${diff.persistent_count}</td></tr></table>
+            ${diff.new.map((finding) => `<div class="detail-finding"><strong>NEW · ${escapeHtml(finding.severity.toUpperCase())} · ${escapeHtml(finding.title)}</strong></div>`).join("")}
+            ${diff.fixed.map((finding) => `<div class="detail-finding"><strong>FIXED · ${escapeHtml(finding.severity.toUpperCase())} · ${escapeHtml(finding.title)}</strong></div>`).join("")}
+            </div>`;
+    } catch (error) { container.innerHTML = `<div class="empty-state">${escapeHtml(error.message)}</div>`; }
 }
 
 $("#scan-form").addEventListener("submit", async (event) => {
@@ -137,11 +167,22 @@ $("#scan-form").addEventListener("submit", async (event) => {
     button.disabled = true; message.className = "form-message"; message.textContent = "Queueing scan...";
     try {
         const data = await request("/api/scans", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({
-            target: $("#target").value, profile: $("#profile").value, include_nuclei: $("#include-nuclei").checked, include_tls: $("#include-tls").checked, include_zap: $("#include-zap").checked, authorization_confirmed: sessionStorage.getItem("kmn_authorization_ack") === "true",
+            target: $("#target").value, profile: $("#profile").value, include_nse: $("#include-nse").checked, include_nuclei: $("#include-nuclei").checked, include_tls: $("#include-tls").checked, include_zap: $("#include-zap").checked, include_udp: $("#include-udp").checked, authorization_confirmed: sessionStorage.getItem("kmn_authorization_ack") === "true",
         }) });
         message.className = "form-message success"; message.textContent = `Scan ${data.id.slice(0, 8)} queued.`; event.target.reset(); $("#include-nuclei").checked = true; $("#include-tls").checked = true; await refreshAll();
     } catch (error) { message.className = "form-message error"; message.textContent = error.message; }
     finally { button.disabled = false; }
+});
+
+$("#login-form").addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const errorBox = $("#login-error");
+    errorBox.textContent = "";
+    try {
+        await request("/api/login", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ password: $("#login-password").value }) });
+        $("#login-dialog").close();
+        await refreshAll();
+    } catch (error) { errorBox.textContent = error.message; }
 });
 
 $("#refresh-button").addEventListener("click", refreshAll);

@@ -37,6 +37,7 @@ class Settings:
     max_target_ports: int = int(os.getenv("MAX_TARGET_PORTS", "65535"))
     nvd_api_key: str = os.getenv("NVD_API_KEY", "").strip()
     authorized_targets: tuple[str, ...] = _env_list("AUTHORIZED_TARGETS")
+    dashboard_password: str = os.getenv("DASHBOARD_PASSWORD", "").strip()
 
 
 settings = Settings()

@@ -25,12 +25,8 @@ class NvdError(RuntimeError):
     pass
 
 
-def search(query: str, limit: int = 20) -> dict[str, Any]:
+def _get(params: dict[str, Any]) -> dict[str, Any]:
     global _last_request
-    query = query.strip()
-    if not query:
-        raise NvdError("Search query is required")
-    limit = max(1, min(limit, 50))
     with _rate_lock:
         interval = 0.7 if settings.nvd_api_key else 6.1
         wait = interval - (time.monotonic() - _last_request)
@@ -40,7 +36,7 @@ def search(query: str, limit: int = 20) -> dict[str, Any]:
         try:
             response = requests.get(
                 BASE_URL,
-                params={"keywordSearch": query, "resultsPerPage": limit},
+                params=params,
                 headers=headers,
                 timeout=30,
             )
@@ -53,14 +49,31 @@ def search(query: str, limit: int = 20) -> dict[str, Any]:
         raise NvdError("NVD rejected the request; verify the API key or retry without it")
     try:
         response.raise_for_status()
-        payload = response.json()
+        return response.json()
     except (requests.RequestException, ValueError) as exc:
         raise NvdError("NVD returned an invalid response") from exc
+
+
+def search(query: str, limit: int = 20) -> dict[str, Any]:
+    query = query.strip()
+    if not query:
+        raise NvdError("Search query is required")
+    limit = max(1, min(limit, 50))
+    payload = _get({"keywordSearch": query, "resultsPerPage": limit})
     return {
         "total_results": payload.get("totalResults", 0),
         "results": [normalize(item.get("cve", {})) for item in payload.get("vulnerabilities", [])],
         "authenticated": bool(settings.nvd_api_key),
     }
+
+
+def lookup_cpe(cpe: str, limit: int = 50) -> list[dict[str, Any]]:
+    """Return CVE records matching an exact CPE name."""
+    cpe = cpe.strip()
+    if not cpe:
+        return []
+    payload = _get({"cpeName": cpe, "resultsPerPage": max(1, min(limit, 50))})
+    return [normalize(item.get("cve", {})) for item in payload.get("vulnerabilities", [])]
 
 
 def normalize(cve: dict[str, Any]) -> dict[str, Any]:

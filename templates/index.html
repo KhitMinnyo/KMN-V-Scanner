@@ -80,6 +80,7 @@
                         <option value="deep">Deep · all TCP ports + web checks</option>
                     </select>
                     <div class="check-grid">
+                        <label class="check"><input id="include-nse" type="checkbox" checked><span>Nmap NSE vulnerability scripts</span></label>
                         <label class="check"><input id="include-nuclei" type="checkbox" checked><span>Nuclei templates</span></label>
                         <label class="check"><input id="include-tls" type="checkbox" checked><span>TLS checks</span></label>
                         <label class="check"><input id="include-zap" type="checkbox"><span>ZAP baseline (deep only)</span></label>
@@ -115,6 +116,21 @@
         <div class="dialog-heading"><div><p class="eyebrow accent">SCAN DETAIL</p><h3 id="dialog-title">Scan</h3></div><button class="close-button" id="close-dialog" type="button" aria-label="Close">×</button></div>
         <div id="dialog-content"></div>
     </dialog>
-    <script src="/static/app.js?v=3.0.0-auth-gate-5" defer></script>
+    <dialog id="login-dialog" class="authorization-dialog">
+        <div class="authorization-mark">!</div>
+        <p class="eyebrow accent">DASHBOARD LOGIN</p>
+        <h2>ဝင်ရောက်ရန် Password လိုအပ်သည်</h2>
+        <p class="authorization-text">ဤ dashboard ကို password ဖြင့် ကာကွယ်ထားပါသည်။ DASHBOARD_PASSWORD ကို သိသူသာ ဝင်ရောက်အသုံးပြုနိုင်ပါသည်။</p>
+        <h3>Password required</h3>
+        <p class="authorization-text">This dashboard is protected. Only operators with the configured dashboard password may sign in.</p>
+        <form id="login-form">
+            <input id="login-password" type="password" placeholder="Dashboard password" autocomplete="current-password" required>
+            <div class="authorization-actions">
+                <button class="primary-button" type="submit">Sign in <span aria-hidden="true">↗</span></button>
+            </div>
+        </form>
+        <p id="login-error" class="form-message error" role="alert"></p>
+    </dialog>
+    <script src="/static/app.js?v=3.1.0-phase1" defer></script>
 </body>
 </html>
