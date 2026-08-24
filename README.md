@@ -4,203 +4,121 @@
   <img src="logo.png" alt="KMN Vulnerability Scanner logo" width="180">
 </p>
 
-KMN Vulnerability Scanner is a local-first, open-source scan workbench. It combines discovery and vulnerability tools behind one persistent job and finding model instead of pretending that one tool can cover every security check.
-
 Version: **3.0.0**
 
-## What It Does
+KMN Vulnerability Scanner is a local-first security scanning dashboard for Kali Linux. It combines Nmap, Nuclei, testssl.sh, optional OWASP ZAP, and optional NVD CVE lookup.
 
-- Discovers open TCP services with Nmap
-- Detects HTTP/HTTPS services and builds scan URLs
-- Runs safe Nuclei templates when Nuclei is installed
-- Checks HTTPS configuration with testssl.sh when available
-- Runs OWASP ZAP baseline checks when explicitly enabled and available
-- Normalizes findings into one risk register
-- Stores scan jobs, services, findings, and tool runs in SQLite
-- Shows progress, scanner availability, service inventory, and findings in a responsive dashboard
-- Provides optional NVD CVE keyword search with a slower no-key fallback
-- Supports quick, standard, and deep scan profiles
-- Works on Kali Linux and supports both `amd64` and `arm64` Docker hosts
+Only scan systems and networks that you own or are explicitly authorized to assess. When the dashboard opens, a Burmese/English authorization warning appears before scanning is available. Unauthorized scanning may be a criminal or civil offense depending on your jurisdiction.
 
-The scanner is not a replacement for a credentialed enterprise scanner. Authenticated Linux/Windows checks, Greenbone integration, schedules, and multi-user access are planned adapter features.
+## 1. Setup
 
-## Safety
+Run this section only the first time.
 
-Only scan systems and networks that you own or are explicitly authorized to assess. The local application allows private, loopback, and link-local targets by default. To enable an authorized external target, set `ALLOW_EXTERNAL_TARGETS=true` in `.env` and keep the service bound behind suitable access control.
-
-The application does not store credentials in this release. Do not put credentials or API keys in source code, shell scripts, Docker Compose files, or the database.
-
-NVD search is optional. Leave `NVD_API_KEY` blank for unauthenticated requests, or add a personal free key to the local `.env` file to receive the higher NVD rate limit. The key is never part of the repository.
-
-## API Keys and `.env`
-
-The core scanner does not require an API key. Nmap, Nuclei, testssl.sh, and OWASP ZAP run with their local installations. Only the optional NVD CVE reference search can use an NVD API key.
-
-### Get an NVD API Key
-
-1. Create or sign in to an NVD account at [nvd.nist.gov](https://nvd.nist.gov/).
-2. Open the [NVD API key request page](https://nvd.nist.gov/developers/request-an-api-key).
-3. Submit the request and follow the instructions sent by NVD.
-4. Copy the key from the NVD message. Do not paste it into GitHub issues, README files, screenshots, or shell history.
-
-An NVD key is free, but it is still a private credential tied to the requester's account and rate limit. Do not share one key with repository users.
-
-### Configure the Key
-
-Create the local environment file:
+### Kali Linux
 
 ```bash
-cp .env.example .env
-chmod 600 .env
+git clone https://github.com/KhitMinnyo/KMN-V-Scanner.git
+cd KMN-V-Scanner
+./setup.sh --no-run
 ```
 
-Open `.env` and set only your local key:
+The setup script installs Python, Nmap, testssl.sh when available, project dependencies, and the optional Nuclei binary for the detected `amd64` or `arm64` architecture. It creates a local `.env` file and never overwrites an existing one.
+
+Check installed tools:
+
+```bash
+./manage.sh doctor
+```
+
+### Docker
+
+Docker supports `amd64` and `arm64` hosts.
+
+```bash
+git clone https://github.com/KhitMinnyo/KMN-V-Scanner.git
+cd KMN-V-Scanner
+cp .env.example .env
+sudo docker compose build
+```
+
+The Docker image downloads the matching Nuclei release binary automatically. Docker data is stored in `data/scanner.db`.
+
+## 2. Run
+
+After setup, use only one of these commands whenever you want to use the scanner again.
+
+### Run on Kali
+
+```bash
+cd KMN-V-Scanner
+./manage.sh run
+```
+
+### Run with Docker
+
+```bash
+cd KMN-V-Scanner
+sudo docker compose up
+```
+
+Open the dashboard:
+
+```text
+http://127.0.0.1:2025
+```
+
+When the authorization popup appears:
+
+- Select `OK, I Understand` only if you are authorized to scan the target.
+- Select `Cancel` to lock the scanner interface.
+
+## 3. External Targets
+
+The generated `.env` enables external target scanning, but the authorization popup and backend confirmation are still required. For safer use, restrict scans to approved targets:
+
+```bash
+nano .env
+```
+
+```env
+ALLOW_EXTERNAL_TARGETS=true
+AUTHORIZED_TARGETS=your-domain.example,203.0.113.10
+```
+
+Use hostname, IP, or CIDR values only. Do not include `https://` or a port. Restart the application after changing `.env`.
+
+## 4. Optional NVD API Key
+
+Nmap, Nuclei, testssl.sh, and ZAP do not require API keys. NVD CVE search works without a key at a slower rate.
+
+To use a free personal NVD API key:
+
+1. Create or sign in to an account at [nvd.nist.gov](https://nvd.nist.gov/).
+2. Request a key from the [NVD API key page](https://nvd.nist.gov/developers/request-an-api-key).
+3. Add the key only to your local `.env` file:
 
 ```env
 NVD_API_KEY=your_personal_nvd_api_key
 ```
 
-The `.env` file is ignored by Git and is loaded automatically when running `./manage.sh run`. It is also passed to Docker Compose through environment-variable interpolation. Leave the value empty if you do not need NVD search:
+Never commit `.env`, put the key in a script, or share the key. If a key was previously exposed, revoke it and request a new one.
 
-```env
-NVD_API_KEY=
-```
+## 5. Stop and Restart
 
-Without a key, NVD search still works with a slower unauthenticated rate limit. If NVD returns a rate-limit error, wait before retrying or configure your own key. The key is never needed to run network scans.
+Stop the local dashboard with `Ctrl+C`.
 
-If an NVD key was ever committed to this repository or another public location, deleting the line is not enough. Revoke that key and request a new one because the old value may remain in Git history.
-
-## Kali Installation
-
-### One-command setup
-
-On a fresh Kali installation, clone the repository and run the installer. It installs the required system packages, creates the Python virtual environment, installs project dependencies, creates a protected local `.env`, and starts the dashboard:
+Stop Docker:
 
 ```bash
-git clone https://github.com/KhitMinnyo/KMN-V-Scanner.git
-cd KMN-V-Scanner
-./setup.sh
+sudo docker compose down
 ```
 
-Open `http://127.0.0.1:2025`. Stop the server with `Ctrl+C`.
-
-The installer supports Python 3.9 through Python 3.14. The pinned Pydantic release has prebuilt wheels for both `amd64` and `arm64`, so a normal install does not require Rust or Cargo.
-
-To install without starting the server:
+Start Docker again:
 
 ```bash
-./setup.sh --no-run
-./manage.sh run
-```
-
-The installer supports `amd64` and `arm64` Kali systems and attempts to install the matching Nuclei binary. Optional tools that cannot be installed are reported by `./manage.sh doctor`; the application continues with the tools that are available.
-
-Install the base scanner tools:
-
-```bash
-sudo apt update
-sudo apt install -y nmap testssl.sh
-```
-
-Install Nuclei using the official ProjectDiscovery release instructions or your approved package source. OWASP ZAP is optional and can be installed separately.
-
-Then install and run KMN:
-
-```bash
-./manage.sh install
-cp .env.example .env
-./manage.sh doctor
-./manage.sh run
-```
-
-Open `http://127.0.0.1:2025`.
-
-`logo.png` is served as both the favicon and the dashboard logo. The supplied 1254x1254 PNG is square and does not need preprocessing; CSS constrains its display size.
-
-## Docker
-
-Docker Desktop, Docker Engine, and Docker Compose support the same application on `amd64` and `arm64` hosts. The Dockerfile downloads the matching Nuclei release binary using Docker's automatic target architecture, so it does not compile Nuclei or rely on a hardcoded CPU architecture.
-
-```bash
-cp .env.example .env
-docker compose up --build
-```
-
-Open `http://127.0.0.1:2025`. Scan data is persisted in `./data/scanner.db`.
-
-To build for both architectures from a machine with Docker Buildx:
-
-```bash
-docker buildx build --platform linux/amd64,linux/arm64 \
-  -t kmn-v-scanner:3.0.0 --push .
-```
-
-ZAP is intentionally not bundled in the base image because it is a large optional dependency and its packaging differs between platforms. The adapter detects `zap-baseline.py` or `zap-baseline` if installed on the scan worker.
-
-## Scan Profiles
-
-- `quick`: TCP ports 1-1024 and light web checks
-- `standard`: TCP ports 1-10000 and enabled safe checks
-- `deep`: TCP ports 1-65535 and optional ZAP baseline checks
-
-Nmap service/version output is treated as asset inventory. A service name/version alone is not considered a confirmed CVE. Findings require evidence from a scanner adapter.
-
-## Project Structure
-
-```text
-app/
-  main.py              FastAPI routes and static file serving
-  config.py            Environment-based configuration
-  database.py          SQLite schema and persistence
-  schemas.py           API request validation
-  scanners/
-    runner.py          Timeout, cancellation, and subprocess boundary
-    target.py          Target validation and normalization
-    nmap.py            Service discovery adapter
-    nuclei.py          Safe-template adapter
-    tls.py             testssl.sh adapter
-    zap.py             Optional ZAP baseline adapter
-  services/jobs.py     Persistent scan orchestration
-static/                Dashboard CSS and JavaScript
-templates/             Dashboard HTML
-tests/                 Parser and validation tests
-```
-
-## API
-
-- `GET /api/health`
-- `GET /api/tools`
-- `GET /api/dashboard`
-- `POST /api/scans`
-- `GET /api/scans`
-- `GET /api/scans/{id}`
-- `POST /api/scans/{id}/cancel`
-- `GET /api/findings`
-- `GET /api/cves/search?q=log4j`
-
-Example request:
-
-```bash
-curl -X POST http://127.0.0.1:2025/api/scans \
-  -H 'Content-Type: application/json' \
-  -d '{"target":"127.0.0.1","profile":"quick"}'
-```
-
-## Development
-
-```bash
-./manage.sh install
-source .venv/bin/activate
-python -m pip install -r requirements-dev.txt
-pytest -q
-```
-
-Run syntax checks without scanner binaries:
-
-```bash
-python -m compileall app app.py tests
+sudo docker compose up
 ```
 
 ## License
 
-The KMN application is released under the MIT License. External tools and their templates retain their own licenses and terms. Review those terms before redistribution or commercial use.
+The KMN application is released under the MIT License. External tools and templates retain their own licenses.

@@ -20,7 +20,7 @@ class JobManager:
         self.lock = threading.Lock()
 
     def start(self, request) -> str:
-        normalized = target.normalize_target(request.target)
+        normalized = target.normalize_target(request.target, request.authorization_confirmed)
         job_id = str(uuid.uuid4())
         database.create_job(job_id, request.target, normalized, request.profile)
         cancel_event = threading.Event()

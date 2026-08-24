@@ -7,7 +7,7 @@ from app.services.nvd import normalize as normalize_cve
 
 
 def test_private_target_is_normalized():
-    assert normalize_target("https://127.0.0.1/login") == "127.0.0.1"
+    assert normalize_target("https://127.0.0.1/login", authorization_confirmed=True) == "127.0.0.1"
 
 
 def test_target_rejects_option_like_input():

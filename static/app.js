@@ -15,6 +15,29 @@ async function request(url, options = {}) {
     return data;
 }
 
+function initializeAuthorizationGate() {
+    const dialog = $("#authorization-dialog");
+    const blocked = $("#blocked-screen");
+    if (sessionStorage.getItem("kmn_authorization_ack") === "true") {
+        document.body.classList.remove("gate-locked");
+        document.body.classList.add("gate-accepted");
+        return;
+    }
+    dialog.showModal();
+    $("#authorization-ok").addEventListener("click", () => {
+        sessionStorage.setItem("kmn_authorization_ack", "true");
+        dialog.close();
+        document.body.classList.remove("gate-locked");
+        document.body.classList.add("gate-accepted");
+    });
+    $("#authorization-cancel").addEventListener("click", () => {
+        dialog.close();
+        document.body.classList.remove("gate-locked");
+        document.body.classList.add("gate-blocked");
+        blocked.hidden = false;
+    });
+}
+
 async function loadDashboard() {
     const data = await request("/api/dashboard");
     $("#app-version").textContent = data.version;
@@ -101,7 +124,7 @@ $("#scan-form").addEventListener("submit", async (event) => {
     button.disabled = true; message.className = "form-message"; message.textContent = "Queueing scan...";
     try {
         const data = await request("/api/scans", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({
-            target: $("#target").value, profile: $("#profile").value, include_nuclei: $("#include-nuclei").checked, include_tls: $("#include-tls").checked, include_zap: $("#include-zap").checked,
+            target: $("#target").value, profile: $("#profile").value, include_nuclei: $("#include-nuclei").checked, include_tls: $("#include-tls").checked, include_zap: $("#include-zap").checked, authorization_confirmed: sessionStorage.getItem("kmn_authorization_ack") === "true",
         }) });
         message.className = "form-message success"; message.textContent = `Scan ${data.id.slice(0, 8)} queued.`; event.target.reset(); $("#include-nuclei").checked = true; $("#include-tls").checked = true; await refreshAll();
     } catch (error) { message.className = "form-message error"; message.textContent = error.message; }
@@ -111,5 +134,6 @@ $("#scan-form").addEventListener("submit", async (event) => {
 $("#refresh-button").addEventListener("click", refreshAll);
 $("#close-dialog").addEventListener("click", () => $("#scan-dialog").close());
 $("#scan-dialog").addEventListener("click", (event) => { if (event.target === $("#scan-dialog")) $("#scan-dialog").close(); });
+initializeAuthorizationGate();
 refreshAll();
 setInterval(refreshAll, 5000);

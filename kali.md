@@ -22,13 +22,14 @@ cp .env.example .env
 
 Open `http://127.0.0.1:2025`.
 
-The default configuration permits private, loopback, and link-local targets only. For an explicitly authorized public target, set this in `.env`:
+The generated `.env` enables external target scanning, but every scan still requires the bilingual authorization confirmation. For safer deployments, restrict explicitly authorized public targets with:
 
 ```env
 ALLOW_EXTERNAL_TARGETS=true
+AUTHORIZED_TARGETS=your-domain.example,203.0.113.10
 ```
 
-Keep the dashboard bound to localhost unless authentication and a trusted reverse proxy are configured.
+The dashboard also requires an authorization confirmation for each scan. `AUTHORIZED_TARGETS` is optional but recommended; when set, an external target must match one of the listed hosts, IPs, or CIDR ranges. Keep the dashboard bound to localhost unless authentication and a trusted reverse proxy are configured.
 
 ## Optional NVD Key
 

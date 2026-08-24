@@ -8,7 +8,7 @@
     <link rel="stylesheet" href="/static/app.css">
     <title>KMN Vulnerability Scanner</title>
 </head>
-<body>
+<body class="gate-locked">
     <header class="topbar">
         <div class="brand">
             <img src="/logo.png" alt="KMN Vulnerability Scanner logo" class="brand-logo">
@@ -19,6 +19,28 @@
         </div>
         <div class="version-pill">v<span id="app-version">...</span></div>
     </header>
+
+    <dialog id="authorization-dialog" class="authorization-dialog" aria-labelledby="authorization-title">
+        <div class="authorization-mark">!</div>
+        <p class="eyebrow accent">AUTHORIZATION REQUIRED</p>
+        <h2 id="authorization-title">ခွင့်ပြုချက်ရှိသော Target များကိုသာ Scan လုပ်ပါ</h2>
+        <p class="authorization-text">သင်ပိုင်ဆိုင်သော သို့မဟုတ် ပိုင်ရှင်ထံမှ တရားဝင်ခွင့်ပြုချက်ရရှိထားသော system/network များကိုသာ scan လုပ်ပါ။ ခွင့်ပြုချက်မရှိဘဲ scan လုပ်ခြင်းသည် သက်ဆိုင်ရာနိုင်ငံ၏ ဥပဒေအရ ပြစ်မှု သို့မဟုတ် အခြားဥပဒေရေးရာအရေးယူမှု ဖြစ်နိုင်ပါသည်။</p>
+        <h3>Scan authorized targets only</h3>
+        <p class="authorization-text">Only scan systems and networks that you own or are explicitly authorized to assess. Unauthorized scanning may be a criminal or civil offense depending on your jurisdiction.</p>
+        <p class="authorization-note">By selecting OK, you confirm that you will use this tool only for authorized security testing.</p>
+        <div class="authorization-actions">
+            <button id="authorization-cancel" class="ghost-button" type="button">Cancel</button>
+            <button id="authorization-ok" class="primary-button" type="button">OK, I Understand <span aria-hidden="true">↗</span></button>
+        </div>
+    </dialog>
+    <div id="blocked-screen" class="blocked-screen" hidden>
+        <div class="blocked-card">
+            <div class="authorization-mark">!</div>
+            <h2>Access blocked</h2>
+            <p>ခွင့်ပြုချက်ကို အတည်မပြုထားသောကြောင့် scanner ကို အသုံးပြု၍မရပါ။</p>
+            <p>You cancelled the authorization notice. Reload the page and select OK only if you are authorized to scan the target.</p>
+        </div>
+    </div>
 
     <main class="shell">
         <section class="hero">

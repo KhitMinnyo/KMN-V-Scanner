@@ -11,6 +11,10 @@ class ScanRequest(BaseModel):
     include_nuclei: bool = True
     include_tls: bool = True
     include_zap: bool = False
+    authorization_confirmed: bool = Field(
+        default=False,
+        description="The operator confirms they own or are authorized to scan the target.",
+    )
 
     @field_validator("target")
     @classmethod
