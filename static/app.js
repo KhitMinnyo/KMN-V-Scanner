@@ -27,7 +27,9 @@ function initializeAuthorizationGate() {
     $("#authorization-ok").addEventListener("click", () => {
         sessionStorage.setItem("kmn_authorization_ack", "true");
         dialog.close();
+        blocked.hidden = true;
         document.body.classList.remove("gate-locked");
+        document.body.classList.remove("gate-blocked");
         document.body.classList.add("gate-accepted");
     });
     $("#authorization-cancel").addEventListener("click", () => {
