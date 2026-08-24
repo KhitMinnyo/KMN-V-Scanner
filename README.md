@@ -119,7 +119,7 @@ Open `http://127.0.0.1:2025`.
 
 ## Docker
 
-Docker Desktop, Docker Engine, and Docker Compose support the same application on `amd64` and `arm64` hosts. The Nuclei binary is compiled in a native multi-stage build, so the image does not rely on a hardcoded CPU architecture.
+Docker Desktop, Docker Engine, and Docker Compose support the same application on `amd64` and `arm64` hosts. The Dockerfile downloads the matching Nuclei release binary using Docker's automatic target architecture, so it does not compile Nuclei or rely on a hardcoded CPU architecture.
 
 ```bash
 cp .env.example .env
