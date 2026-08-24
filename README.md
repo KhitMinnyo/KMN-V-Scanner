@@ -72,6 +72,27 @@ If an NVD key was ever committed to this repository or another public location, 
 
 ## Kali Installation
 
+### One-command setup
+
+On a fresh Kali installation, clone the repository and run the installer. It installs the required system packages, creates the Python virtual environment, installs project dependencies, creates a protected local `.env`, and starts the dashboard:
+
+```bash
+git clone https://github.com/KhitMinnyo/KMN-V-Scanner.git
+cd KMN-V-Scanner
+./setup.sh
+```
+
+Open `http://127.0.0.1:2025`. Stop the server with `Ctrl+C`.
+
+To install without starting the server:
+
+```bash
+./setup.sh --no-run
+./manage.sh run
+```
+
+The installer supports `amd64` and `arm64` Kali systems and attempts to install the matching Nuclei binary. Optional tools that cannot be installed are reported by `./manage.sh doctor`; the application continues with the tools that are available.
+
 Install the base scanner tools:
 
 ```bash
