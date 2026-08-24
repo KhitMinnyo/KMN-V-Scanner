@@ -35,4 +35,8 @@ ENV/
 
 # Project specific
 data/*.db
+data/*.db-*
 *.log
+.pytest_cache/
+.coverage
+.env

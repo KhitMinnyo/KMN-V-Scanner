@@ -1,0 +1,12 @@
+.git
+.env
+.venv
+venv
+__pycache__
+*.py[cod]
+*.db
+data
+*.tar.gz
+.pytest_cache
+.coverage
+tests

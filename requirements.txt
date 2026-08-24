@@ -1,7 +1,5 @@
-Flask==2.0.1
-requests==2.31.0
-python-dotenv==1.0.0
-Werkzeug==2.3.7
-python-nmap==0.7.1
-rich==13.4.2
-ipaddress==1.0.23
+fastapi==0.115.6
+pydantic==2.10.6
+uvicorn[standard]==0.34.0
+python-dotenv==1.0.1
+requests==2.32.3

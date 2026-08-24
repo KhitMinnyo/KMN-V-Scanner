@@ -1,17 +1,23 @@
-version: '3.8'
-
 services:
   vulnerability-scanner:
-    build: .
+    build:
+      context: .
+      args:
+        NUCLEI_VERSION: v3.4.10
     ports:
-      - "5000:5000"
+      - "2025:2025"
     environment:
-      - NVD_API_KEY=e0f9bf5e-63fb-4c08-9973-be97e45e2669
-      - FLASK_APP=app.py
-      - FLASK_ENV=production
-    dns:
-      - 8.8.8.8
-      - 8.8.4.4
+      APP_NAME: ${APP_NAME:-KMN Vulnerability Scanner}
+      APP_VERSION: ${APP_VERSION:-3.0.0}
+      HOST: 0.0.0.0
+      PORT: ${PORT:-2025}
+      DATABASE_URL: /app/data/scanner.db
+      MAX_SCAN_WORKERS: ${MAX_SCAN_WORKERS:-2}
+      SCAN_COMMAND_TIMEOUT: ${SCAN_COMMAND_TIMEOUT:-900}
+      ALLOW_EXTERNAL_TARGETS: ${ALLOW_EXTERNAL_TARGETS:-false}
+      NVD_API_KEY: ${NVD_API_KEY:-}
     volumes:
-      - ./data:/app/data:rw
+      - ./data:/app/data
     restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
