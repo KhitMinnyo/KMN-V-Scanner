@@ -84,6 +84,8 @@ cd KMN-V-Scanner
 
 Open `http://127.0.0.1:2025`. Stop the server with `Ctrl+C`.
 
+The installer supports Python 3.9 through Python 3.14. The pinned Pydantic release has prebuilt wheels for both `amd64` and `arm64`, so a normal install does not require Rust or Cargo.
+
 To install without starting the server:
 
 ```bash
