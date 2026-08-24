@@ -41,14 +41,6 @@ NVD_API_KEY=your_personal_key
 
 Never commit `.env`, place the key in a shell script, or share one key with repository users. If a key was ever committed, revoke it and issue a new one because deleting the current line does not remove it from git history.
 
-## Docker
-
-```bash
-cp .env.example .env
-```
-
-The Dockerfile builds on both `linux/amd64` and `linux/arm64`. Scan data is stored in `data/scanner.db`.
-
 ## Troubleshooting
 
 Check installed binaries with:

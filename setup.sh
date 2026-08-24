@@ -31,7 +31,7 @@ for argument in "$@"; do
 done
 
 if [[ "$(uname -s)" != "Linux" ]]; then
-    printf '%s\n' 'This installer is intended for Kali/Debian-based Linux. Use Docker on other platforms.' >&2
+    printf '%s\n' 'This installer is intended for Kali/Debian-based Linux.' >&2
     exit 1
 fi
 
@@ -44,7 +44,7 @@ esac
 
 if [[ "$SKIP_SYSTEM_TOOLS" == false ]]; then
     if ! command -v apt-get >/dev/null 2>&1; then
-        printf '%s\n' 'apt-get is required for automatic Kali/Debian setup. Use Docker or install dependencies manually.' >&2
+        printf '%s\n' 'apt-get is required for automatic Kali/Debian setup. Install dependencies manually if apt-get is unavailable.' >&2
         exit 1
     fi
 

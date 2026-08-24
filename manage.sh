@@ -13,7 +13,6 @@ usage() {
         '  run       Start the local dashboard on port 2025' \
         '  doctor    Check scanner binaries and architecture' \
         '  db        Initialize the local database' \
-        '  docker    Build and start the multi-architecture container setup'
 }
 
 activate_venv() {
@@ -48,9 +47,6 @@ case "${1:-help}" in
                 printf '  %-18s unavailable\n' "$tool"
             fi
         done
-        ;;
-    docker)
-        exec docker compose up --build
         ;;
     help|--help|-h)
         usage
