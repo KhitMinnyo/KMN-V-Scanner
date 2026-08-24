@@ -31,6 +31,20 @@ AUTHORIZED_TARGETS=your-domain.example,203.0.113.10
 
 The dashboard also requires an authorization confirmation for each scan. `AUTHORIZED_TARGETS` is optional but recommended; when set, an external target must match one of the listed hosts, IPs, or CIDR ranges. Keep the dashboard bound to localhost unless authentication and a trusted reverse proxy are configured.
 
+Optional dashboard login protection:
+
+```env
+DASHBOARD_PASSWORD=choose_a_strong_local_password
+AUTO_UPDATE_NUCLEI_TEMPLATES=true
+TRIVY_SCAN_ROOT=/home/your-user/projects
+SSH_AUDIT_USER=security-audit
+SSH_AUDIT_KEY_PATH=/home/your-user/.ssh/kmn_audit
+SSH_AUDIT_KNOWN_HOSTS_PATH=data/ssh_known_hosts
+NOTIFICATION_WEBHOOK_URL=
+```
+
+The optional UDP scan normally requires elevated Nmap privileges. Trivy must be installed for filesystem/image scans. SSH audit requires a dedicated low-privilege account and key. Recurring schedules and webhook notifications operate only while the local application is running.
+
 ## Optional NVD Key
 
 NVD CVE reference search works without a key at a slower rate. A personal free key can be placed only in the local `.env` file:

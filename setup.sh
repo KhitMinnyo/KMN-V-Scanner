@@ -59,12 +59,18 @@ if [[ "$SKIP_SYSTEM_TOOLS" == false ]]; then
 
     printf '%s\n' 'Installing required Kali/Debian packages...'
     $SUDO apt-get update
-    $SUDO apt-get install -y --no-install-recommends python3 python3-venv python3-pip nmap curl unzip ca-certificates
+    $SUDO apt-get install -y --no-install-recommends python3 python3-venv python3-pip nmap openssh-client curl unzip ca-certificates
 
     if apt-cache show testssl.sh >/dev/null 2>&1; then
         $SUDO apt-get install -y --no-install-recommends testssl.sh
     else
         printf '%s\n' 'Optional package testssl.sh is not available in the configured repositories; continuing.'
+    fi
+
+    if apt-cache show trivy >/dev/null 2>&1; then
+        $SUDO apt-get install -y --no-install-recommends trivy
+    else
+        printf '%s\n' 'Optional package trivy is not available in the configured repositories; install it manually for artifact scans.'
     fi
 fi
 
@@ -97,6 +103,24 @@ else
     chmod 600 .env
     printf '%s\n' 'Keeping existing .env.'
 fi
+
+ensure_env_key() {
+    local key="$1"
+    local value="$2"
+    if ! grep -q "^${key}=" .env; then
+        printf '\n%s=%s\n' "$key" "$value" >> .env
+        printf 'Added missing %s setting to .env.\n' "$key"
+    fi
+}
+
+ensure_env_key "DASHBOARD_PASSWORD" ""
+ensure_env_key "AUTO_UPDATE_NUCLEI_TEMPLATES" "true"
+ensure_env_key "TRIVY_SCAN_ROOT" "."
+ensure_env_key "SSH_AUDIT_USER" ""
+ensure_env_key "SSH_AUDIT_KEY_PATH" ""
+ensure_env_key "SSH_AUDIT_KNOWN_HOSTS_PATH" "data/ssh_known_hosts"
+ensure_env_key "NOTIFICATION_WEBHOOK_URL" ""
+ensure_env_key "ALLOW_INSECURE_WEBHOOK" "false"
 
 ./manage.sh install
 

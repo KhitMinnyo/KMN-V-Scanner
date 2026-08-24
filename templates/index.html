@@ -52,7 +52,7 @@
             </div>
             <div class="scope-note">
                 <strong>Authorized targets only</strong>
-                <span>External targets are disabled by default.</span>
+                <span>Authorization confirmation is required before scanning.</span>
             </div>
         </section>
 
@@ -81,9 +81,12 @@
                     </select>
                     <div class="check-grid">
                         <label class="check"><input id="include-nse" type="checkbox" checked><span>Nmap NSE vulnerability scripts</span></label>
+                        <label class="check"><input id="include-cve-match" type="checkbox" checked><span>Match service versions to NVD CVEs</span></label>
                         <label class="check"><input id="include-nuclei" type="checkbox" checked><span>Nuclei templates</span></label>
                         <label class="check"><input id="include-tls" type="checkbox" checked><span>TLS checks</span></label>
                         <label class="check"><input id="include-zap" type="checkbox"><span>ZAP baseline (deep only)</span></label>
+                        <label class="check"><input id="include-udp" type="checkbox"><span>UDP top 100 ports (slow, requires root)</span></label>
+                        <label class="check"><input id="include-ssh-audit" type="checkbox"><span>Read-only authenticated SSH audit</span></label>
                     </div>
                     <button class="primary-button" type="submit" id="start-button">Start safe scan <span aria-hidden="true">↗</span></button>
                 </form>
@@ -94,6 +97,43 @@
             <div class="panel jobs-panel">
                 <div class="panel-heading"><div><p class="eyebrow accent">OPERATIONS</p><h3>Recent scans</h3></div><button class="ghost-button" id="refresh-button" type="button">Refresh</button></div>
                 <div id="jobs-list" class="jobs-list"><div class="empty-state">No scans yet. Start with a private lab target.</div></div>
+            </div>
+        </section>
+
+        <section class="phase3-grid">
+            <div class="panel">
+                <div class="panel-heading"><div><p class="eyebrow accent">ARTIFACT SECURITY</p><h3>Trivy scan</h3></div><span class="muted">Filesystem or image</span></div>
+                <form id="artifact-form">
+                    <label for="artifact-mode">Target type</label>
+                    <select id="artifact-mode">
+                        <option value="fs">Filesystem path</option>
+                        <option value="image">Container image</option>
+                    </select>
+                    <label for="artifact-target">Target</label>
+                    <input id="artifact-target" type="text" placeholder=". or nginx:latest" required>
+                    <p class="field-help">Filesystem paths must be inside TRIVY_SCAN_ROOT.</p>
+                    <button class="primary-button" type="submit">Start Trivy scan <span aria-hidden="true">↗</span></button>
+                </form>
+                <div id="artifact-message" class="form-message" role="status"></div>
+            </div>
+
+            <div class="panel">
+                <div class="panel-heading"><div><p class="eyebrow accent">AUTOMATION</p><h3>Recurring scans</h3></div><span class="muted">Minimum 5 minutes</span></div>
+                <form id="schedule-form">
+                    <label for="schedule-target">Network target</label>
+                    <input id="schedule-target" type="text" placeholder="192.168.1.10 or authorized.example" required>
+                    <label for="schedule-profile">Profile</label>
+                    <select id="schedule-profile">
+                        <option value="quick">Quick</option>
+                        <option value="standard" selected>Standard</option>
+                        <option value="deep">Deep</option>
+                    </select>
+                    <label for="schedule-interval">Interval in minutes</label>
+                    <input id="schedule-interval" type="number" value="1440" min="5" max="525600" required>
+                    <button class="primary-button" type="submit">Create schedule <span aria-hidden="true">↗</span></button>
+                </form>
+                <div id="schedule-message" class="form-message" role="status"></div>
+                <div id="schedule-list" class="schedule-list"><div class="empty-state">No recurring schedules.</div></div>
             </div>
         </section>
 
@@ -131,6 +171,6 @@
         </form>
         <p id="login-error" class="form-message error" role="alert"></p>
     </dialog>
-    <script src="/static/app.js?v=3.1.0-phase1" defer></script>
+    <script src="/static/app.js?v=3.3.0-phase3" defer></script>
 </body>
 </html>

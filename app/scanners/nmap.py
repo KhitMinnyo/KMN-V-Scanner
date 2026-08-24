@@ -24,7 +24,7 @@ def discover_hosts(target: str, timeout: int, cancel_event: threading.Event) -> 
         f"{timeout}s",
         "-oX",
         "-",
-        target,
+        *target.split(),
     ]
     if not command_available("nmap"):
         return run_command(["nmap"], timeout=1, cancel_event=cancel_event), []
@@ -39,7 +39,10 @@ def parse_live_hosts(output: str) -> list[str]:
     hosts: list[str] = []
     for host in root.findall(".//host"):
         status = host.find("./status")
-        address = host.find("./address")
+        address = next(
+            (item for item in host.findall("./address") if item.get("addrtype") in {"ipv4", "ipv6"}),
+            None,
+        )
         if status is not None and status.get("state") == "up" and address is not None:
             hosts.append(address.get("addr", ""))
     return [item for item in hosts if item]
@@ -61,7 +64,34 @@ def scan(target: str, profile: str, timeout: int, cancel_event: threading.Event)
         f"{timeout}s",
         "-oX",
         "-",
-        target,
+        *target.split(),
+    ]
+    if not command_available("nmap"):
+        return run_command(["nmap"], timeout=1, cancel_event=cancel_event), []
+    result = run_command(args, timeout, cancel_event)
+    if result.status != "completed":
+        return result, []
+    return result, parse_xml(target, result.stdout)
+
+
+def scan_udp(target: str, timeout: int, cancel_event: threading.Event) -> tuple[CommandResult, list[dict]]:
+    """Scan the top 100 UDP ports. Nmap normally requires root for this scan."""
+    args = [
+        "nmap",
+        "-sU",
+        "--top-ports",
+        "100",
+        "-sV",
+        "-Pn",
+        "--open",
+        "-T3",
+        "--max-retries",
+        "1",
+        "--host-timeout",
+        f"{timeout}s",
+        "-oX",
+        "-",
+        *target.split(),
     ]
     if not command_available("nmap"):
         return run_command(["nmap"], timeout=1, cancel_event=cancel_event), []
@@ -86,6 +116,8 @@ def parse_xml(target: str, output: str) -> list[dict]:
             product = service_element.get("product", "") if service_element is not None else ""
             version = service_element.get("version", "") if service_element is not None else ""
             extra = service_element.get("extrainfo", "") if service_element is not None else ""
+            cpe_element = service_element.find("cpe") if service_element is not None else None
+            cpe = (cpe_element.text or "").strip() if cpe_element is not None else ""
             if extra:
                 version = f"{version} {extra}".strip()
             port = int(port_element.get("portid", "0"))
@@ -102,8 +134,9 @@ def parse_xml(target: str, output: str) -> list[dict]:
                     "service": service_name,
                     "product": product,
                     "version": version,
+                    "cpe": cpe,
                     "url": url,
-                    "raw": {"service": service_name, "product": product, "version": version},
+                    "raw": {"service": service_name, "product": product, "version": version, "cpe": cpe},
                 }
             )
     return services

@@ -8,6 +8,7 @@ still required for a finding.
 from __future__ import annotations
 
 from threading import Lock
+import threading
 import time
 from typing import Any
 
@@ -25,13 +26,24 @@ class NvdError(RuntimeError):
     pass
 
 
-def _get(params: dict[str, Any]) -> dict[str, Any]:
+def has_api_key() -> bool:
+    return bool(settings.nvd_api_key)
+
+
+def _get(
+    params: dict[str, Any],
+    cancel_event: threading.Event | None = None,
+) -> dict[str, Any]:
     global _last_request
     with _rate_lock:
         interval = 0.7 if settings.nvd_api_key else 6.1
         wait = interval - (time.monotonic() - _last_request)
-        if wait > 0:
-            time.sleep(wait)
+        while wait > 0:
+            if cancel_event and cancel_event.is_set():
+                raise NvdError("NVD request cancelled")
+            delay = min(wait, 0.25)
+            time.sleep(delay)
+            wait -= delay
         headers = {"apiKey": settings.nvd_api_key} if settings.nvd_api_key else {}
         try:
             response = requests.get(
@@ -67,12 +79,19 @@ def search(query: str, limit: int = 20) -> dict[str, Any]:
     }
 
 
-def lookup_cpe(cpe: str, limit: int = 50) -> list[dict[str, Any]]:
+def lookup_cpe(
+    cpe: str,
+    limit: int = 50,
+    cancel_event: threading.Event | None = None,
+) -> list[dict[str, Any]]:
     """Return CVE records matching an exact CPE name."""
     cpe = cpe.strip()
     if not cpe:
         return []
-    payload = _get({"cpeName": cpe, "resultsPerPage": max(1, min(limit, 50))})
+    payload = _get(
+        {"cpeName": cpe, "resultsPerPage": max(1, min(limit, 50))},
+        cancel_event=cancel_event,
+    )
     return [normalize(item.get("cve", {})) for item in payload.get("vulnerabilities", [])]
 
 

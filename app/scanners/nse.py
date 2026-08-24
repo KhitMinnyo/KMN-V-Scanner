@@ -24,7 +24,7 @@ def scan(target: str, ports: str, timeout: int, cancel_event: threading.Event) -
         f"{timeout}s",
         "-oX",
         "-",
-        target,
+        *target.split(),
     ]
     result = run_command(args, timeout, cancel_event)
     if result.status != "completed":
@@ -59,9 +59,14 @@ def _finding_from_script(host: str, port: int | None, protocol: str, script: ET.
     output = (script.get("output") or "").strip()
     if not output:
         return None
+    upper_output = output.upper()
+    if upper_output.startswith("ERROR:"):
+        return None
     cves = list(dict.fromkeys(CVE_RE.findall(output)))
-    vulnerable = "VULNERABLE" in output.upper()
-    severity = "high" if vulnerable else ("low" if cves else "info")
+    vulnerable = bool(re.search(r"(?im)^\s*[|_]?\s*(?:STATE:\s*)?VULNERABLE\s*:?", output))
+    if not vulnerable:
+        return None
+    severity = "high"
     title = script_id
     if cves:
         title = f"{script_id} ({', '.join(cves[:3])})"

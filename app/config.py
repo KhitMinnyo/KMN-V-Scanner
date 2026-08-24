@@ -27,7 +27,7 @@ def _env_list(name: str) -> tuple[str, ...]:
 @dataclass(frozen=True)
 class Settings:
     app_name: str = os.getenv("APP_NAME", "KMN Vulnerability Scanner")
-    version: str = os.getenv("APP_VERSION", __version__)
+    version: str = __version__
     host: str = os.getenv("HOST", "127.0.0.1")
     port: int = int(os.getenv("PORT", "2025"))
     database_url: str = os.getenv("DATABASE_URL", str(ROOT_DIR / "data" / "scanner.db"))
@@ -38,6 +38,16 @@ class Settings:
     nvd_api_key: str = os.getenv("NVD_API_KEY", "").strip()
     authorized_targets: tuple[str, ...] = _env_list("AUTHORIZED_TARGETS")
     dashboard_password: str = os.getenv("DASHBOARD_PASSWORD", "").strip()
+    auto_update_nuclei_templates: bool = _env_bool("AUTO_UPDATE_NUCLEI_TEMPLATES", True)
+    trivy_scan_root: str = os.getenv("TRIVY_SCAN_ROOT", str(ROOT_DIR))
+    ssh_audit_user: str = os.getenv("SSH_AUDIT_USER", "").strip()
+    ssh_audit_key_path: str = os.getenv("SSH_AUDIT_KEY_PATH", "").strip()
+    ssh_audit_known_hosts_path: str = os.getenv(
+        "SSH_AUDIT_KNOWN_HOSTS_PATH",
+        str(ROOT_DIR / "data" / "ssh_known_hosts"),
+    ).strip()
+    notification_webhook_url: str = os.getenv("NOTIFICATION_WEBHOOK_URL", "").strip()
+    allow_insecure_webhook: bool = _env_bool("ALLOW_INSECURE_WEBHOOK", False)
 
 
 settings = Settings()

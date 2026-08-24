@@ -4,9 +4,11 @@
   <img src="logo.png" alt="KMN Vulnerability Scanner logo" width="180">
 </p>
 
-Version: **3.0.0**
+Version: **3.3.0**
 
 Local-first vulnerability scanning dashboard for Kali Linux. It combines Nmap, Nuclei, testssl.sh, optional OWASP ZAP, and optional NVD CVE lookup.
+
+Current coverage includes TCP service detection, CIDR live-host discovery, Nmap NSE checks, Nuclei templates, TLS checks, optional UDP scanning, service CPE-to-CVE matching, Trivy artifact scans, read-only SSH audits, recurring schedules, webhook notifications, scan comparison, dashboard login, and CSV/HTML reports.
 
 Only scan systems and networks that you own or are explicitly authorized to assess. The dashboard displays a Burmese/English authorization warning before scanning is available. Unauthorized scanning may be a criminal or civil offense depending on your jurisdiction.
 
@@ -22,13 +24,31 @@ cd KMN-V-Scanner
 ./setup.sh --no-run
 ```
 
-The setup script installs the required Kali packages, creates `.venv`, installs Python dependencies, creates a protected `.env`, and attempts to install Nuclei for the detected `amd64` or `arm64` architecture.
+The setup script installs the required Kali packages, creates `.venv`, installs Python dependencies, creates a protected `.env`, adds missing configuration keys without overwriting existing values, and attempts to install Nuclei for the detected `amd64` or `arm64` architecture.
 
 Check installed scanner tools:
 
 ```bash
 ./manage.sh doctor
 ```
+
+Optional dashboard password protection can be enabled in `.env`:
+
+```env
+DASHBOARD_PASSWORD=choose_a_strong_local_password
+```
+
+Optional Phase 3 settings:
+
+```env
+TRIVY_SCAN_ROOT=/home/your-user/projects
+SSH_AUDIT_USER=security-audit
+SSH_AUDIT_KEY_PATH=/home/your-user/.ssh/kmn_audit
+SSH_AUDIT_KNOWN_HOSTS_PATH=data/ssh_known_hosts
+NOTIFICATION_WEBHOOK_URL=https://your-approved-webhook.example/path
+```
+
+Use a dedicated read-only SSH account and a key that works with `BatchMode`; passphrase prompts are not supported by background jobs. Never put a private key's contents in `.env`.
 
 ### Configure External Targets
 
@@ -83,6 +103,14 @@ When the authorization popup appears:
 - Select `Show authorization notice again` to reopen the popup without reloading the page.
 
 Stop the local dashboard with `Ctrl+C`.
+
+The `UDP top 100 ports` option is slower and normally requires running the application with privileges that permit Nmap UDP scanning. Version-based NVD matches are marked with low confidence and should be verified before remediation.
+
+Open a completed scan's `Details` view to export CSV, open an HTML report, or compare it with the previous completed scan of the same target.
+
+Trivy filesystem targets must be inside `TRIVY_SCAN_ROOT`. Recurring schedules prevent overlapping runs and operate only while the application is running. Webhook payloads contain target names and finding counts, so use HTTPS and configure only a trusted endpoint.
+
+NVD CPE matches require a concrete detected version and are stored as low-severity `candidate` records, not confirmed open vulnerabilities. Confirm the installed version and affected range before acting on them. Scan comparison reports fixed findings only when both scans completed with equivalent profiles/options and comparable successful tool coverage.
 
 ## 3. Troubleshooting
 

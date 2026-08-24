@@ -47,6 +47,7 @@ def init_db() -> None:
                 target TEXT NOT NULL,
                 normalized_target TEXT NOT NULL,
                 profile TEXT NOT NULL,
+                options_json TEXT NOT NULL DEFAULT '{}',
                 status TEXT NOT NULL,
                 progress INTEGER NOT NULL DEFAULT 0,
                 stage TEXT NOT NULL DEFAULT 'queued',
@@ -67,6 +68,7 @@ def init_db() -> None:
                 service TEXT,
                 product TEXT,
                 version TEXT,
+                cpe TEXT,
                 url TEXT,
                 raw_json TEXT,
                 UNIQUE(scan_id, host, port, protocol)
@@ -108,22 +110,57 @@ def init_db() -> None:
                 stderr TEXT
             );
 
+            CREATE TABLE IF NOT EXISTS scan_schedules (
+                id TEXT PRIMARY KEY,
+                target TEXT NOT NULL,
+                profile TEXT NOT NULL,
+                options_json TEXT NOT NULL,
+                interval_minutes INTEGER NOT NULL,
+                enabled INTEGER NOT NULL DEFAULT 1,
+                next_run_at TEXT NOT NULL,
+                last_run_at TEXT,
+                last_scan_id TEXT,
+                last_error TEXT,
+                created_at TEXT NOT NULL
+            );
+
             CREATE INDEX IF NOT EXISTS idx_jobs_created ON scan_jobs(created_at DESC);
             CREATE INDEX IF NOT EXISTS idx_findings_severity ON findings(severity);
             CREATE INDEX IF NOT EXISTS idx_findings_scan ON findings(scan_id);
+            CREATE INDEX IF NOT EXISTS idx_schedules_due ON scan_schedules(enabled, next_run_at);
             """
         )
+        service_columns = {row[1] for row in conn.execute("PRAGMA table_info(services)").fetchall()}
+        if "cpe" not in service_columns:
+            try:
+                conn.execute("ALTER TABLE services ADD COLUMN cpe TEXT")
+            except sqlite3.OperationalError as exc:
+                if "duplicate column" not in str(exc).lower():
+                    raise
+        job_columns = {row[1] for row in conn.execute("PRAGMA table_info(scan_jobs)").fetchall()}
+        if "options_json" not in job_columns:
+            try:
+                conn.execute("ALTER TABLE scan_jobs ADD COLUMN options_json TEXT NOT NULL DEFAULT '{}'")
+            except sqlite3.OperationalError as exc:
+                if "duplicate column" not in str(exc).lower():
+                    raise
 
 
-def create_job(job_id: str, target: str, normalized_target: str, profile: str) -> None:
+def create_job(
+    job_id: str,
+    target: str,
+    normalized_target: str,
+    profile: str,
+    options: dict[str, Any] | None = None,
+) -> None:
     with connection() as conn:
         conn.execute(
             """
             INSERT INTO scan_jobs
-                (id, target, normalized_target, profile, status, stage, created_at)
-            VALUES (?, ?, ?, ?, 'queued', 'queued', ?)
+                (id, target, normalized_target, profile, options_json, status, stage, created_at)
+            VALUES (?, ?, ?, ?, ?, 'queued', 'queued', ?)
             """,
-            (job_id, target, normalized_target, profile, utc_now()),
+            (job_id, target, normalized_target, profile, json.dumps(options or {}, sort_keys=True), utc_now()),
         )
 
 
@@ -167,8 +204,8 @@ def add_service(scan_id: str, service: dict[str, Any]) -> None:
         conn.execute(
             """
             INSERT OR REPLACE INTO services
-                (scan_id, host, port, protocol, state, service, product, version, url, raw_json)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                (scan_id, host, port, protocol, state, service, product, version, cpe, url, raw_json)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 scan_id,
@@ -179,6 +216,7 @@ def add_service(scan_id: str, service: dict[str, Any]) -> None:
                 service.get("service", ""),
                 service.get("product", ""),
                 service.get("version", ""),
+                service.get("cpe", ""),
                 service.get("url"),
                 json.dumps(service.get("raw", {}), ensure_ascii=True),
             ),
@@ -192,8 +230,8 @@ def add_finding(scan_id: str, finding: dict[str, Any]) -> bool:
             INSERT OR IGNORE INTO findings
                 (scan_id, host, port, protocol, title, severity, confidence,
                  cve_id, cwe_id, description, evidence, remediation, source_tool,
-                 rule_id, reference_url, fingerprint, created_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                 rule_id, reference_url, status, fingerprint, created_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 scan_id,
@@ -211,6 +249,7 @@ def add_finding(scan_id: str, finding: dict[str, Any]) -> bool:
                 finding["source_tool"],
                 finding.get("rule_id"),
                 finding.get("reference_url"),
+                finding.get("status", "open"),
                 finding["fingerprint"],
                 utc_now(),
             ),
@@ -293,3 +332,121 @@ def list_findings(limit: int = 100) -> list[dict[str, Any]]:
             (limit,),
         ).fetchall()
     return [dict(row) for row in rows]
+
+
+def get_previous_scan(scan_id: str) -> dict[str, Any] | None:
+    job = get_job(scan_id)
+    if not job:
+        return None
+    with connection() as conn:
+        row = conn.execute(
+            """
+            SELECT * FROM scan_jobs
+            WHERE normalized_target = ? AND profile = ? AND options_json = ?
+              AND id != ? AND status = 'completed' AND created_at < ?
+            ORDER BY created_at DESC LIMIT 1
+            """,
+            (job["normalized_target"], job["profile"], job["options_json"], scan_id, job["created_at"]),
+        ).fetchone()
+    return dict(row) if row else None
+
+
+def get_finding_fingerprints(scan_id: str) -> dict[str, dict[str, Any]]:
+    with connection() as conn:
+        rows = conn.execute(
+            "SELECT fingerprint, title, severity, source_tool, cve_id FROM findings WHERE scan_id = ?",
+            (scan_id,),
+        ).fetchall()
+    return {row["fingerprint"]: dict(row) for row in rows}
+
+
+def get_tool_statuses(scan_id: str) -> dict[str, set[str]]:
+    with connection() as conn:
+        rows = conn.execute("SELECT tool, status FROM tool_runs WHERE scan_id = ?", (scan_id,)).fetchall()
+    statuses: dict[str, set[str]] = {}
+    for row in rows:
+        statuses.setdefault(row["tool"], set()).add(row["status"])
+    return statuses
+
+
+def create_schedule(
+    schedule_id: str,
+    target: str,
+    profile: str,
+    options: dict[str, Any],
+    interval_minutes: int,
+    next_run_at: str,
+) -> None:
+    with connection() as conn:
+        conn.execute(
+            """
+            INSERT INTO scan_schedules
+                (id, target, profile, options_json, interval_minutes, next_run_at, created_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+            """,
+            (schedule_id, target, profile, json.dumps(options), interval_minutes, next_run_at, utc_now()),
+        )
+
+
+def list_schedules() -> list[dict[str, Any]]:
+    with connection() as conn:
+        rows = conn.execute("SELECT * FROM scan_schedules ORDER BY created_at DESC").fetchall()
+    result = []
+    for row in rows:
+        item = dict(row)
+        item["options"] = json.loads(item.pop("options_json"))
+        item["enabled"] = bool(item["enabled"])
+        result.append(item)
+    return result
+
+
+def claim_due_schedules(now_value: str, lease_until: str) -> list[dict[str, Any]]:
+    with connection() as conn:
+        conn.execute("BEGIN IMMEDIATE")
+        rows = conn.execute(
+            "SELECT * FROM scan_schedules WHERE enabled = 1 AND next_run_at <= ? ORDER BY next_run_at",
+            (now_value,),
+        ).fetchall()
+        for row in rows:
+            conn.execute(
+                "UPDATE scan_schedules SET next_run_at = ? WHERE id = ? AND enabled = 1 AND next_run_at <= ?",
+                (lease_until, row["id"], now_value),
+            )
+    result = []
+    for row in rows:
+        item = dict(row)
+        item["options"] = json.loads(item.pop("options_json"))
+        result.append(item)
+    return result
+
+
+def update_schedule_run(
+    schedule_id: str,
+    next_run_at: str,
+    last_scan_id: str | None = None,
+    last_error: str | None = None,
+) -> None:
+    with connection() as conn:
+        conn.execute(
+            """
+            UPDATE scan_schedules
+            SET next_run_at = ?, last_run_at = ?, last_scan_id = ?, last_error = ?
+            WHERE id = ?
+            """,
+            (next_run_at, utc_now(), last_scan_id, last_error, schedule_id),
+        )
+
+
+def delete_schedule(schedule_id: str) -> bool:
+    with connection() as conn:
+        cursor = conn.execute("DELETE FROM scan_schedules WHERE id = ?", (schedule_id,))
+    return cursor.rowcount > 0
+
+
+def set_schedule_enabled(schedule_id: str, enabled: bool) -> bool:
+    with connection() as conn:
+        cursor = conn.execute(
+            "UPDATE scan_schedules SET enabled = ? WHERE id = ?",
+            (1 if enabled else 0, schedule_id),
+        )
+    return cursor.rowcount > 0
