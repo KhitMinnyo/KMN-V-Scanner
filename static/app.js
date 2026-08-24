@@ -212,7 +212,7 @@ $("#scan-form").addEventListener("submit", async (event) => {
         const data = await request("/api/scans", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({
             target: $("#target").value, profile: $("#profile").value, include_nse: true, include_cve_match: true, include_nuclei: true, include_tls: true, include_zap: $("#include-zap").checked, include_udp: $("#include-udp").checked, include_ssh_audit: $("#include-ssh-audit").checked, authorization_confirmed: sessionStorage.getItem("kmn_authorization_ack") === "true",
         }) });
-        message.className = "form-message success"; message.textContent = `Scan ${data.id.slice(0, 8)} queued.`; event.target.reset(); $("#include-nuclei").checked = true; $("#include-tls").checked = true; await refreshAll();
+        message.className = "form-message success"; message.textContent = `Scan ${data.id.slice(0, 8)} queued.`; event.target.reset(); await refreshAll();
     } catch (error) { message.className = "form-message error"; message.textContent = error.message; }
     finally { button.disabled = false; }
 });
