@@ -38,6 +38,7 @@ def scan(host: str, port: int, timeout: int, cancel_event: threading.Event) -> t
     known_hosts = Path(settings.ssh_audit_known_hosts_path).expanduser()
     known_hosts.parent.mkdir(parents=True, exist_ok=True)
     known_hosts.touch(mode=0o600, exist_ok=True)
+    known_hosts.chmod(0o600)
     args = [
         "ssh",
         "-i",

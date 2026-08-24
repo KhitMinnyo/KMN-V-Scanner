@@ -8,6 +8,8 @@ from app.scanners.nuclei import parse_jsonl
 from app.scanners.target import TargetError, normalize_target
 from app.scanners.ssh_audit import parse_output as parse_ssh_output
 from app.scanners.trivy import TrivyParseError, parse_json as parse_trivy_json
+from app.scanners.windows_audit import parse_payload as parse_windows_payload
+from app.scanners.cloud import parse_directory as parse_cloud_directory
 from app.services.cve_match import has_concrete_version, normalize_cpe, severity_from_score
 from app.services.nvd import normalize as normalize_cve
 
@@ -86,6 +88,30 @@ openssl/stable 3.0 amd64 [upgradable from: 2.9]
     assert "high" in severities
     assert "medium" in severities
     assert any(item["rule_id"] == "pending-updates" for item in findings)
+
+
+def test_windows_parser_reports_read_only_security_controls():
+    findings = parse_windows_payload(
+        "192.168.1.25",
+        5986,
+        {
+            "SMB": {"EnableSMB1Protocol": True, "RequireSecuritySignature": False},
+            "RDP": {"fDenyTSConnections": 0},
+            "Hotfixes": [],
+        },
+    )
+    assert {item["rule_id"] for item in findings} == {"smb1", "smb-signing", "rdp-enabled", "hotfix-inventory"}
+
+
+def test_cloud_parser_reports_failed_controls(tmp_path):
+    report = tmp_path / "findings.json"
+    report.write_text(
+        '[{"CheckID":"aws.s3.public","CheckTitle":"Public bucket","Status":"FAIL","Severity":"high","ResourceId":"bucket-1"}]',
+        encoding="utf-8",
+    )
+    findings = parse_cloud_directory(tmp_path, "aws")
+    assert findings[0]["severity"] == "high"
+    assert findings[0]["source_tool"] == "prowler"
 
 
 def test_nuclei_parser_normalizes_finding():

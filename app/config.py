@@ -48,6 +48,20 @@ class Settings:
     ).strip()
     notification_webhook_url: str = os.getenv("NOTIFICATION_WEBHOOK_URL", "").strip()
     allow_insecure_webhook: bool = _env_bool("ALLOW_INSECURE_WEBHOOK", False)
+    smtp_host: str = os.getenv("SMTP_HOST", "").strip()
+    smtp_port: int = int(os.getenv("SMTP_PORT", "587"))
+    smtp_user: str = os.getenv("SMTP_USER", "").strip()
+    smtp_password: str = os.getenv("SMTP_PASSWORD", "")
+    smtp_from: str = os.getenv("SMTP_FROM", "").strip()
+    smtp_to: str = os.getenv("SMTP_TO", "").strip()
+    smtp_starttls: bool = _env_bool("SMTP_STARTTLS", True)
+    windows_audit_user: str = os.getenv("WINDOWS_AUDIT_USER", "").strip()
+    windows_audit_password: str = os.getenv("WINDOWS_AUDIT_PASSWORD", "")
+    windows_audit_transport: str = os.getenv("WINDOWS_AUDIT_TRANSPORT", "ntlm").strip().lower()
+    windows_audit_server_cert_validation: str = os.getenv(
+        "WINDOWS_AUDIT_SERVER_CERT_VALIDATION", "validate"
+    ).strip().lower()
+    cloud_allowed_providers: tuple[str, ...] = _env_list("CLOUD_ALLOWED_PROVIDERS")
 
 
 settings = Settings()

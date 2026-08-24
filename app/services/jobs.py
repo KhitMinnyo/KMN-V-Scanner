@@ -9,7 +9,7 @@ import uuid
 
 from .. import database
 from ..config import settings
-from ..scanners import nmap, nse, nuclei, ssh_audit, target, tls, trivy, zap
+from ..scanners import cloud, nmap, nse, nuclei, ssh_audit, target, tls, trivy, windows_audit, zap
 from ..scanners.runner import command_available
 from . import cve_match
 from . import notifier
@@ -52,6 +52,80 @@ class JobManager:
             self.cancel_events[job_id] = cancel_event
         self.executor.submit(self._run_artifact, job_id, request.mode, normalized, cancel_event)
         return job_id
+
+    def start_windows(self, request) -> str:
+        if not request.authorization_confirmed:
+            raise ValueError("Confirm that you own or are authorized to audit this Windows host")
+        normalized = target.normalize_target(request.host, request.authorization_confirmed)
+        job_id = str(uuid.uuid4())
+        database.create_job(job_id, request.host, normalized, "windows-audit", {"port": request.port})
+        cancel_event = threading.Event()
+        with self.lock:
+            self.cancel_events[job_id] = cancel_event
+        self.executor.submit(self._run_windows, job_id, normalized, request.port, cancel_event)
+        return job_id
+
+    def start_cloud(self, request) -> str:
+        if not request.authorization_confirmed:
+            raise ValueError("Confirm that you own or are authorized to audit this cloud account")
+        provider = cloud.validate_provider(request.provider)
+        job_id = str(uuid.uuid4())
+        database.create_job(job_id, provider, provider, "cloud-audit", {"provider": provider})
+        cancel_event = threading.Event()
+        with self.lock:
+            self.cancel_events[job_id] = cancel_event
+        self.executor.submit(self._run_cloud, job_id, provider, cancel_event)
+        return job_id
+
+    def _run_windows(self, job_id: str, host: str, port: int, cancel_event: threading.Event) -> None:
+        try:
+            database.update_job(job_id, status="running", stage="windows-audit", progress=10, message="Running read-only Windows audit", started_at=database.utc_now())
+            result, findings = windows_audit.scan(host, port, settings.command_timeout, cancel_event)
+            database.add_tool_run(job_id, self._tool_run("windows-audit", result))
+            if result.status == "cancelled":
+                self._cancelled(job_id)
+                return
+            if result.status == "unavailable":
+                raise RuntimeError(result.stderr or "Windows audit adapter is unavailable")
+            if result.status != "completed":
+                raise RuntimeError(result.stderr or "Windows audit failed")
+            for finding in findings:
+                database.add_finding(job_id, finding)
+            database.update_job(job_id, status="completed", stage="complete", progress=100, message=f"Windows audit completed with {len(findings)} findings", completed_at=database.utc_now())
+        except Exception as exc:
+            database.update_job(job_id, status="failed", stage="error", message="Windows audit failed", error=str(exc), completed_at=database.utc_now())
+        finally:
+            try:
+                notifier.notify_scan(job_id)
+            except Exception as exc:
+                print(f"Windows audit notification failed: {exc}")
+            with self.lock:
+                self.cancel_events.pop(job_id, None)
+
+    def _run_cloud(self, job_id: str, provider: str, cancel_event: threading.Event) -> None:
+        try:
+            database.update_job(job_id, status="running", stage="cloud-audit", progress=10, message=f"Running {provider} cloud audit", started_at=database.utc_now())
+            result, findings = cloud.scan(provider, settings.command_timeout, cancel_event)
+            database.add_tool_run(job_id, self._tool_run(f"prowler:{provider}", result))
+            if result.status == "cancelled":
+                self._cancelled(job_id)
+                return
+            if result.status == "unavailable":
+                raise RuntimeError("prowler is not installed; install it before cloud auditing")
+            if result.status != "completed":
+                raise RuntimeError(result.stderr or "Cloud audit failed")
+            for finding in findings:
+                database.add_finding(job_id, finding)
+            database.update_job(job_id, status="completed", stage="complete", progress=100, message=f"{provider} audit completed with {len(findings)} findings", completed_at=database.utc_now())
+        except Exception as exc:
+            database.update_job(job_id, status="failed", stage="error", message="Cloud audit failed", error=str(exc), completed_at=database.utc_now())
+        finally:
+            try:
+                notifier.notify_scan(job_id)
+            except Exception as exc:
+                print(f"Cloud audit notification failed: {exc}")
+            with self.lock:
+                self.cancel_events.pop(job_id, None)
 
     def _run_artifact(self, job_id: str, mode: str, target_value: str, cancel_event: threading.Event) -> None:
         try:

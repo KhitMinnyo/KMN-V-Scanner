@@ -36,6 +36,17 @@ class ArtifactScanRequest(BaseModel):
     authorization_confirmed: bool = False
 
 
+class WindowsScanRequest(BaseModel):
+    host: str = Field(min_length=1, max_length=253)
+    port: int = Field(default=5986, ge=1, le=65535)
+    authorization_confirmed: bool = False
+
+
+class CloudScanRequest(BaseModel):
+    provider: Literal["aws", "azure", "gcp"]
+    authorization_confirmed: bool = False
+
+
 class ScheduleRequest(ScanRequest):
     interval_minutes: int = Field(ge=5, le=525600)
 

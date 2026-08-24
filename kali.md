@@ -41,9 +41,21 @@ SSH_AUDIT_USER=security-audit
 SSH_AUDIT_KEY_PATH=/home/your-user/.ssh/kmn_audit
 SSH_AUDIT_KNOWN_HOSTS_PATH=data/ssh_known_hosts
 NOTIFICATION_WEBHOOK_URL=
+SMTP_HOST=
+SMTP_PORT=587
+SMTP_USER=
+SMTP_PASSWORD=
+SMTP_FROM=
+SMTP_TO=
+SMTP_STARTTLS=true
+WINDOWS_AUDIT_USER=
+WINDOWS_AUDIT_PASSWORD=
+WINDOWS_AUDIT_TRANSPORT=ntlm
+WINDOWS_AUDIT_SERVER_CERT_VALIDATION=validate
+CLOUD_ALLOWED_PROVIDERS=aws,azure,gcp
 ```
 
-The optional UDP scan normally requires elevated Nmap privileges. Trivy must be installed for filesystem/image scans. SSH audit requires a dedicated low-privilege account and key. Recurring schedules and webhook notifications operate only while the local application is running.
+The optional UDP scan normally requires elevated Nmap privileges. Trivy must be installed for filesystem/image scans. SSH audit requires a dedicated low-privilege account and key. Windows audit requires WinRM access and `pywinrm`; cloud audit requires Prowler and provider CLI credentials. Recurring schedules and webhook/email notifications operate only while the local application is running.
 
 ## Optional NVD Key
 

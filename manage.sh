@@ -40,7 +40,7 @@ case "${1:-help}" in
         ;;
     doctor)
         printf 'Architecture: %s\n' "$(uname -m)"
-        for tool in nmap nuclei testssl.sh zap-baseline.py trivy ssh; do
+        for tool in nmap nuclei testssl.sh zap-baseline.py trivy prowler ssh; do
             if command -v "$tool" >/dev/null 2>&1; then
                 printf '  %-18s ready (%s)\n' "$tool" "$(command -v "$tool")"
             else

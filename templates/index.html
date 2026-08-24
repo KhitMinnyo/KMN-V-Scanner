@@ -137,6 +137,32 @@
             </div>
         </section>
 
+        <section class="phase3-grid">
+            <div class="panel">
+                <div class="panel-heading"><div><p class="eyebrow accent">WINDOWS SECURITY</p><h3>Read-only WinRM audit</h3></div><span class="muted">5986 / 5985</span></div>
+                <form id="windows-form">
+                    <label for="windows-host">Windows host</label>
+                    <input id="windows-host" type="text" placeholder="192.168.1.25" required>
+                    <label for="windows-port">WinRM port</label>
+                    <input id="windows-port" type="number" value="5986" min="1" max="65535" required>
+                    <p class="field-help">Configure WINDOWS_AUDIT_USER and WINDOWS_AUDIT_PASSWORD in .env. Checks are read-only.</p>
+                    <button class="primary-button" type="submit">Start Windows audit <span aria-hidden="true">↗</span></button>
+                </form>
+                <div id="windows-message" class="form-message" role="status"></div>
+            </div>
+
+            <div class="panel">
+                <div class="panel-heading"><div><p class="eyebrow accent">CLOUD POSTURE</p><h3>Prowler audit</h3></div><span class="muted">AWS · Azure · GCP</span></div>
+                <form id="cloud-form">
+                    <label for="cloud-provider">Cloud provider</label>
+                    <select id="cloud-provider"><option value="aws">AWS</option><option value="azure">Azure</option><option value="gcp">GCP</option></select>
+                    <p class="field-help">Prowler uses the cloud CLI credentials already configured on this Kali host. KMN does not store them.</p>
+                    <button class="primary-button" type="submit">Start cloud audit <span aria-hidden="true">↗</span></button>
+                </form>
+                <div id="cloud-message" class="form-message" role="status"></div>
+            </div>
+        </section>
+
         <section class="panel findings-panel">
             <div class="panel-heading"><div><p class="eyebrow accent">RISK REGISTER</p><h3>Latest findings</h3></div><span class="muted">Normalized from scanner adapters</span></div>
             <div id="findings-list" class="findings-list"><div class="empty-state">Findings will appear here after a scan.</div></div>
@@ -171,6 +197,6 @@
         </form>
         <p id="login-error" class="form-message error" role="alert"></p>
     </dialog>
-    <script src="/static/app.js?v=3.3.0-phase3" defer></script>
+    <script src="/static/app.js?v=3.4.0-phase4" defer></script>
 </body>
 </html>

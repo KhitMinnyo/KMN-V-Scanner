@@ -121,6 +121,18 @@ ensure_env_key "SSH_AUDIT_KEY_PATH" ""
 ensure_env_key "SSH_AUDIT_KNOWN_HOSTS_PATH" "data/ssh_known_hosts"
 ensure_env_key "NOTIFICATION_WEBHOOK_URL" ""
 ensure_env_key "ALLOW_INSECURE_WEBHOOK" "false"
+ensure_env_key "SMTP_HOST" ""
+ensure_env_key "SMTP_PORT" "587"
+ensure_env_key "SMTP_USER" ""
+ensure_env_key "SMTP_PASSWORD" ""
+ensure_env_key "SMTP_FROM" ""
+ensure_env_key "SMTP_TO" ""
+ensure_env_key "SMTP_STARTTLS" "true"
+ensure_env_key "WINDOWS_AUDIT_USER" ""
+ensure_env_key "WINDOWS_AUDIT_PASSWORD" ""
+ensure_env_key "WINDOWS_AUDIT_TRANSPORT" "ntlm"
+ensure_env_key "WINDOWS_AUDIT_SERVER_CERT_VALIDATION" "validate"
+ensure_env_key "CLOUD_ALLOWED_PROVIDERS" "aws,azure,gcp"
 
 ./manage.sh install
 

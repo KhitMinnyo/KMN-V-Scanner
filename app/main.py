@@ -18,7 +18,7 @@ from fastapi.staticfiles import StaticFiles
 
 from . import database
 from .config import ROOT_DIR, settings
-from .schemas import ArtifactScanRequest, LoginRequest, ScanRequest, ScheduleRequest, ScheduleStateRequest
+from .schemas import ArtifactScanRequest, CloudScanRequest, LoginRequest, ScanRequest, ScheduleRequest, ScheduleStateRequest, WindowsScanRequest
 from .scanners.runner import command_available, run_command
 from .services.jobs import job_manager
 from .services.nvd import NvdError, search as search_nvd
@@ -137,6 +137,7 @@ def tools() -> dict:
         "owasp-zap": command_available("zap-baseline.py") or command_available("zap-baseline"),
         "trivy": command_available("trivy"),
         "ssh": command_available("ssh"),
+        "prowler": command_available("prowler"),
     }
 
 
@@ -158,6 +159,24 @@ def create_scan(request: ScanRequest) -> dict:
 def create_artifact_scan(request: ArtifactScanRequest) -> dict:
     try:
         job_id = job_manager.start_artifact(request)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    return {"id": job_id, "status": "queued"}
+
+
+@app.post("/api/windows/scans", status_code=202)
+def create_windows_scan(request: WindowsScanRequest) -> dict:
+    try:
+        job_id = job_manager.start_windows(request)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    return {"id": job_id, "status": "queued"}
+
+
+@app.post("/api/cloud/scans", status_code=202)
+def create_cloud_scan(request: CloudScanRequest) -> dict:
+    try:
+        job_id = job_manager.start_cloud(request)
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     return {"id": job_id, "status": "queued"}

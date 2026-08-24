@@ -227,6 +227,30 @@ $("#schedule-form").addEventListener("submit", async (event) => {
     } catch (error) { message.className = "form-message error"; message.textContent = error.message; }
 });
 
+$("#windows-form").addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const message = $("#windows-message");
+    message.textContent = "Queueing Windows audit...";
+    try {
+        const data = await request("/api/windows/scans", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({
+            host: $("#windows-host").value, port: Number($("#windows-port").value), authorization_confirmed: sessionStorage.getItem("kmn_authorization_ack") === "true",
+        }) });
+        message.className = "form-message success"; message.textContent = `Windows audit ${data.id.slice(0, 8)} queued.`; await loadJobs();
+    } catch (error) { message.className = "form-message error"; message.textContent = error.message; }
+});
+
+$("#cloud-form").addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const message = $("#cloud-message");
+    message.textContent = "Queueing cloud audit...";
+    try {
+        const data = await request("/api/cloud/scans", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({
+            provider: $("#cloud-provider").value, authorization_confirmed: sessionStorage.getItem("kmn_authorization_ack") === "true",
+        }) });
+        message.className = "form-message success"; message.textContent = `Cloud audit ${data.id.slice(0, 8)} queued.`; await loadJobs();
+    } catch (error) { message.className = "form-message error"; message.textContent = error.message; }
+});
+
 $("#login-form").addEventListener("submit", async (event) => {
     event.preventDefault();
     const errorBox = $("#login-error");

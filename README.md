@@ -4,11 +4,11 @@
   <img src="logo.png" alt="KMN Vulnerability Scanner logo" width="180">
 </p>
 
-Version: **3.3.0**
+Version: **3.4.0**
 
 Local-first vulnerability scanning dashboard for Kali Linux. It combines Nmap, Nuclei, testssl.sh, optional OWASP ZAP, and optional NVD CVE lookup.
 
-Current coverage includes TCP service detection, CIDR live-host discovery, Nmap NSE checks, Nuclei templates, TLS checks, optional UDP scanning, service CPE-to-CVE matching, Trivy artifact scans, read-only SSH audits, recurring schedules, webhook notifications, scan comparison, dashboard login, and CSV/HTML reports.
+Current coverage includes TCP service detection, CIDR live-host discovery, Nmap NSE checks, Nuclei templates, TLS checks, optional UDP scanning, service CPE-to-CVE matching, Trivy artifact scans, read-only SSH and Windows audits, AWS/Azure/GCP Prowler audits, recurring schedules, webhook/email notifications, scan comparison, dashboard login, and CSV/HTML reports.
 
 Only scan systems and networks that you own or are explicitly authorized to assess. The dashboard displays a Burmese/English authorization warning before scanning is available. Unauthorized scanning may be a criminal or civil offense depending on your jurisdiction.
 
@@ -38,7 +38,7 @@ Optional dashboard password protection can be enabled in `.env`:
 DASHBOARD_PASSWORD=choose_a_strong_local_password
 ```
 
-Optional Phase 3 settings:
+Optional Phase 3/4 settings:
 
 ```env
 TRIVY_SCAN_ROOT=/home/your-user/projects
@@ -46,9 +46,23 @@ SSH_AUDIT_USER=security-audit
 SSH_AUDIT_KEY_PATH=/home/your-user/.ssh/kmn_audit
 SSH_AUDIT_KNOWN_HOSTS_PATH=data/ssh_known_hosts
 NOTIFICATION_WEBHOOK_URL=https://your-approved-webhook.example/path
+SMTP_HOST=smtp.example.com
+SMTP_PORT=587
+SMTP_USER=security@example.com
+SMTP_PASSWORD=use_an_app_password
+SMTP_FROM=security@example.com
+SMTP_TO=ops@example.com
+SMTP_STARTTLS=true
+WINDOWS_AUDIT_USER=DOMAIN\\audit-user
+WINDOWS_AUDIT_PASSWORD=use_a_secret_store_value
+WINDOWS_AUDIT_TRANSPORT=ntlm
+WINDOWS_AUDIT_SERVER_CERT_VALIDATION=validate
+CLOUD_ALLOWED_PROVIDERS=aws,azure,gcp
 ```
 
 Use a dedicated read-only SSH account and a key that works with `BatchMode`; passphrase prompts are not supported by background jobs. Never put a private key's contents in `.env`.
+
+Windows auditing uses `pywinrm` and fixed read-only PowerShell inventory checks. Cloud auditing uses Prowler and the provider CLI credentials already configured on the Kali host; KMN does not collect or persist cloud credentials. Configure SMTP only when email notification is required, and use an app password where the provider supports it.
 
 ### Configure External Targets
 
@@ -108,7 +122,7 @@ The `UDP top 100 ports` option is slower and normally requires running the appli
 
 Open a completed scan's `Details` view to export CSV, open an HTML report, or compare it with the previous completed scan of the same target.
 
-Trivy filesystem targets must be inside `TRIVY_SCAN_ROOT`. Recurring schedules prevent overlapping runs and operate only while the application is running. Webhook payloads contain target names and finding counts, so use HTTPS and configure only a trusted endpoint.
+Trivy filesystem targets must be inside `TRIVY_SCAN_ROOT`. Recurring schedules prevent overlapping runs and operate only while the application is running. Webhook payloads contain target names and finding counts, so use HTTPS and configure only a trusted endpoint. Email notifications require SMTP settings and an app password where the provider supports it.
 
 NVD CPE matches require a concrete detected version and are stored as low-severity `candidate` records, not confirmed open vulnerabilities. Confirm the installed version and affected range before acting on them. Scan comparison reports fixed findings only when both scans completed with equivalent profiles/options and comparable successful tool coverage.
 

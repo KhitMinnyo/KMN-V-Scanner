@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 from collections import Counter
+from email.message import EmailMessage
 import ipaddress
+import smtplib
 from urllib.parse import urlparse
 
 import requests
@@ -60,6 +62,33 @@ def notify_scan(scan_id: str) -> None:
         response.raise_for_status()
     except requests.RequestException as exc:
         print(f"Scan notification failed: {exc}")
+    _send_email(summary, scan, severities)
+
+
+def _send_email(summary: str, scan: dict, severities: Counter) -> None:
+    if not all((settings.smtp_host, settings.smtp_from, settings.smtp_to)):
+        return
+    message = EmailMessage()
+    message["Subject"] = f"KMN scan {scan['status']}: {scan['target']}"
+    message["From"] = settings.smtp_from
+    message["To"] = settings.smtp_to
+    message.set_content(
+        f"{summary}\n\n"
+        f"Critical: {severities['critical']}\n"
+        f"High: {severities['high']}\n"
+        f"Medium: {severities['medium']}\n"
+        f"Low: {severities['low']}\n"
+        f"Info: {severities['info']}\n"
+    )
+    try:
+        with smtplib.SMTP(settings.smtp_host, settings.smtp_port, timeout=10) as client:
+            if settings.smtp_starttls:
+                client.starttls()
+            if settings.smtp_user:
+                client.login(settings.smtp_user, settings.smtp_password)
+            client.send_message(message)
+    except (OSError, smtplib.SMTPException) as exc:
+        print(f"Email notification failed: {exc}")
 
 
 def _is_loopback(hostname: str | None) -> bool:
