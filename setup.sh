@@ -113,8 +113,6 @@ ensure_env_key() {
     fi
 }
 
-ensure_env_key "DASHBOARD_PASSWORD" ""
-ensure_env_key "DASHBOARD_USERNAME" "admin"
 ensure_env_key "DASHBOARD_ROLE" "admin"
 ensure_env_key "DASHBOARD_SESSION_SECRET" ""
 ensure_env_key "AUTO_UPDATE_NUCLEI_TEMPLATES" "true"

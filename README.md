@@ -4,7 +4,7 @@
   <img src="logo.png" alt="KMN Vulnerability Scanner logo" width="180">
 </p>
 
-Version: **3.6.0**
+Version: **3.7.0**
 
 See the [CHANGELOG](CHANGELOG.md) for release history.
 
@@ -34,15 +34,6 @@ Check installed scanner tools:
 ./manage.sh doctor
 ```
 
-Optional dashboard password protection can be enabled in `.env`:
-
-```env
-DASHBOARD_PASSWORD=choose_a_strong_local_password
-DASHBOARD_USERNAME=admin
-DASHBOARD_ROLE=admin
-DASHBOARD_SESSION_SECRET=generate_a_long_random_secret
-```
-
 Optional Phase 3/4 settings:
 
 ```env
@@ -69,7 +60,6 @@ Use a dedicated read-only SSH account and a key that works with `BatchMode`; pas
 
 Windows auditing uses `pywinrm` and fixed read-only PowerShell inventory checks. Cloud auditing uses Prowler and the provider CLI credentials already configured on the Kali host; KMN does not collect or persist cloud credentials. Configure SMTP only when email notification is required, and use an app password where the provider supports it.
 
-When dashboard login is enabled, the bootstrap user is `DASHBOARD_USERNAME` with the password in `DASHBOARD_PASSWORD`. Admins can add `admin`, `operator`, and `viewer` accounts from the dashboard. A `viewer` account is read-only; an `operator` can run scans; an `admin` can manage users.
 
 ### Configure External Targets
 

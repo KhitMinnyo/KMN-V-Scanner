@@ -10,11 +10,6 @@ const severityRank = { critical: 1, high: 2, medium: 3, low: 4, info: 5 };
 
 async function request(url, options = {}) {
     const response = await fetch(url, options);
-    if (response.status === 401 && url !== "/api/login") {
-        const dialog = $("#login-dialog");
-        if (dialog && !dialog.open) dialog.showModal();
-        throw new Error("Login required");
-    }
     const data = await response.json();
     if (!response.ok) throw new Error(data.detail || data.message || "Request failed");
     return data;
@@ -129,41 +124,6 @@ async function loadSchedules() {
     }));
 }
 
-async function loadCurrentUser() {
-    const user = await request("/api/me");
-    $("#current-user").textContent = `${user.username} · ${user.role}`;
-    $("#logout-button").hidden = !user.auth_required;
-    const panel = $("#users-panel");
-    panel.hidden = user.role !== "admin";
-    if (user.role === "admin") await loadUsers();
-}
-
-async function loadUsers() {
-    const data = await request("/api/users");
-    const container = $("#users-list");
-    if (!data.users.length) {
-        container.innerHTML = '<div class="empty-state">No local users.</div>';
-        return;
-    }
-    container.innerHTML = data.users.map((user) => `
-        <article class="user-item"><div><div class="user-name">${escapeHtml(user.username)}</div><div class="user-meta">${escapeHtml(user.role)} · ${user.enabled ? "enabled" : "disabled"}</div></div>
-        <button class="ghost-button user-toggle" data-id="${user.id}" data-enabled="${user.enabled}" type="button">${user.enabled ? "Disable" : "Enable"}</button>
-        <button class="ghost-button user-delete" data-id="${user.id}" type="button">Delete</button></article>`).join("");
-    container.querySelectorAll(".user-toggle").forEach((button) => button.addEventListener("click", async () => {
-        try {
-            await request(`/api/users/${button.dataset.id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ enabled: button.dataset.enabled !== "true" }) });
-            await loadUsers();
-        } catch (error) { $("#user-message").textContent = error.message; }
-    }));
-    container.querySelectorAll(".user-delete").forEach((button) => button.addEventListener("click", async () => {
-        if (!window.confirm("Delete this local user?")) return;
-        try {
-            await request(`/api/users/${button.dataset.id}`, { method: "DELETE" });
-            await loadUsers();
-        } catch (error) { $("#user-message").textContent = error.message; }
-    }));
-}
-
 $("#cve-form").addEventListener("submit", async (event) => {
     event.preventDefault();
     const results = $("#cve-results");
@@ -180,7 +140,6 @@ $("#cve-form").addEventListener("submit", async (event) => {
 async function refreshAll() {
     if (sessionStorage.getItem("kmn_authorization_ack") !== "true") return;
     try {
-        await loadCurrentUser();
         await Promise.all([loadDashboard(), loadTools(), loadJobs(), loadFindings(), loadSchedules()]);
     }
     catch (error) { $("#form-message").textContent = error.message; $("#form-message").className = "form-message error"; }
@@ -287,34 +246,6 @@ $("#cloud-form").addEventListener("submit", async (event) => {
         }) });
         message.className = "form-message success"; message.textContent = `Cloud audit ${data.id.slice(0, 8)} queued.`; await loadJobs();
     } catch (error) { message.className = "form-message error"; message.textContent = error.message; }
-});
-
-$("#login-form").addEventListener("submit", async (event) => {
-    event.preventDefault();
-    const errorBox = $("#login-error");
-    errorBox.textContent = "";
-    try {
-        await request("/api/login", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ username: $("#login-username").value, password: $("#login-password").value }) });
-        $("#login-dialog").close();
-        await refreshAll();
-    } catch (error) { errorBox.textContent = error.message; }
-});
-
-$("#user-form").addEventListener("submit", async (event) => {
-    event.preventDefault();
-    const message = $("#user-message");
-    try {
-        await request("/api/users", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({
-            username: $("#new-username").value, password: $("#new-password").value, role: $("#new-role").value,
-        }) });
-        event.target.reset(); message.className = "form-message success"; message.textContent = "User created."; await loadUsers();
-    } catch (error) { message.className = "form-message error"; message.textContent = error.message; }
-});
-
-$("#logout-button").addEventListener("click", async () => {
-    await request("/api/logout", { method: "POST" });
-    $("#logout-button").hidden = true;
-    $("#login-dialog").showModal();
 });
 
 $("#refresh-button").addEventListener("click", refreshAll);

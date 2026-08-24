@@ -34,10 +34,6 @@ The dashboard also requires an authorization confirmation for each scan. `AUTHOR
 Optional dashboard login protection:
 
 ```env
-DASHBOARD_PASSWORD=choose_a_strong_local_password
-DASHBOARD_USERNAME=admin
-DASHBOARD_ROLE=admin
-DASHBOARD_SESSION_SECRET=generate_a_long_random_secret
 AUTO_UPDATE_NUCLEI_TEMPLATES=true
 TRIVY_SCAN_ROOT=/home/your-user/projects
 SSH_AUDIT_USER=security-audit
@@ -60,7 +56,6 @@ CLOUD_ALLOWED_PROVIDERS=aws,azure,gcp
 
 The optional UDP scan normally requires elevated Nmap privileges. Trivy must be installed for filesystem/image scans. SSH audit requires a dedicated low-privilege account and key. Windows audit requires WinRM access and `pywinrm`; cloud audit requires Prowler and provider CLI credentials. Recurring schedules and webhook/email notifications operate only while the local application is running.
 
-Dashboard roles are `admin`, `operator`, and `viewer`. Admins can manage users, operators can run scans, and viewers can only read results.
 
 ## Optional NVD Key
 

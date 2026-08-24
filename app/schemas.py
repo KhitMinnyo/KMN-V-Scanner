@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Literal, Optional
+from typing import Literal
 
 from pydantic import BaseModel, Field, field_validator
 
@@ -26,23 +26,6 @@ class ScanRequest(BaseModel):
     @classmethod
     def clean_target(cls, value: str) -> str:
         return value.strip()
-
-
-class LoginRequest(BaseModel):
-    username: str = Field(default="admin", min_length=1, max_length=64)
-    password: str = Field(min_length=1, max_length=256)
-
-
-class UserCreateRequest(BaseModel):
-    username: str = Field(min_length=1, max_length=64)
-    password: str = Field(min_length=12, max_length=256)
-    role: Literal["admin", "operator", "viewer"] = "viewer"
-
-
-class UserUpdateRequest(BaseModel):
-    role: Optional[Literal["admin", "operator", "viewer"]] = None
-    enabled: Optional[bool] = None
-    password: Optional[str] = Field(default=None, min_length=12, max_length=256)
 
 
 class ArtifactScanRequest(BaseModel):

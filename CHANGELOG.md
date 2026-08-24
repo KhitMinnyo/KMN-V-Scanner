@@ -2,6 +2,15 @@
 
 All notable changes to KMN Vulnerability Scanner are documented here.
 
+## [3.7.0] - 2026-08-24
+
+### Changed
+
+- Removed dashboard admin authentication and RBAC from the local Kali application.
+- Removed the login dialog, user-management panel, user routes, and dashboard password settings.
+- Local `./manage.sh run` now opens the scanner directly after the authorization notice.
+- Kept the authorization notice and per-scan confirmation as the scanner safety control.
+
 ## [3.6.0] - 2026-08-24
 
 ### Added
@@ -23,9 +32,6 @@ All notable changes to KMN Vulnerability Scanner are documented here.
 - Webhook and SMTP email notifications
 - CSV export and HTML scan reports
 - Bilingual authorization gate for the dashboard
-- Optional dashboard authentication with expiring signed sessions
-- Local users with `admin`, `operator`, and `viewer` roles
-- Admin user management from the dashboard
 - `amd64` and `arm64` Kali setup support
 
 ### Security
@@ -41,6 +47,7 @@ All notable changes to KMN Vulnerability Scanner are documented here.
 
 ### Fixed
 
+- Removed the unused dashboard admin authentication and RBAC flow so local Kali runs open directly without login.
 - Python 3.14 installation failure caused by an outdated Pydantic/PyO3 dependency
 - Nmap NSE false positives from `NOT VULNERABLE` output
 - UDP services being sent to TCP-only NSE checks
